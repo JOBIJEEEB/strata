@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:strata/theme/app_theme.dart';
 import 'package:strata/providers/providers.dart';
 import 'package:strata/database/database_service.dart';
 import 'package:strata/screens/tabs/history_tab.dart'; // Implements scansProvider
+import 'package:strata/services/ble_service.dart';
 
 class SettingsTab extends ConsumerStatefulWidget {
   const SettingsTab({super.key});
@@ -79,7 +81,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                         foregroundColor: Colors.white,
                       ),
                       onPressed: () {
-                        ref.read(bleConnectionProvider.notifier).connectToPi();
+                        context.push('/pairing');
                       },
                       child: const Text(
                         'Connect',
@@ -91,7 +93,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                     ),
             onTap: () {
               if (!bleState.isConnected) {
-                ref.read(bleConnectionProvider.notifier).connectToPi();
+                context.push('/pairing');
               }
             },
           ),
@@ -226,11 +228,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                     trailingOverride: Switch(
                       value: bleState.isConnected,
                       activeThumbColor: AppColors.primary,
-                      onChanged:
-                          (val) =>
-                              ref
-                                  .read(bleConnectionProvider.notifier)
-                                  .toggleConnection(),
+                    onChanged: (val) async {
+                          if (!val) {
+                            await BleService.instance.disconnect();
+                          }
+                        },
                     ),
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),

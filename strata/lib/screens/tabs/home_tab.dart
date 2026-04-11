@@ -152,12 +152,7 @@ class HomeTab extends ConsumerWidget {
                                   foregroundColor: Colors.white,
                                 ),
                                 onPressed:
-                                    () =>
-                                        ref
-                                            .read(
-                                              bleConnectionProvider.notifier,
-                                            )
-                                            .connectToPi(),
+                                    () => context.push('/pairing'),
                                 child: const Text(
                                   'Connect',
                                   style: TextStyle(

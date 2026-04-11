@@ -5,7 +5,8 @@ import 'package:strata/theme/app_theme.dart';
 import 'package:strata/theme/components.dart';
 import 'package:strata/database/database_service.dart';
 import 'package:strata/screens/tabs/history_tab.dart';
-import 'package:strata/providers/providers.dart'; // Implements MockScanGenerator
+import 'package:strata/providers/providers.dart';
+import 'package:strata/services/ble_service.dart';
 
 class ScanFlowScreen extends ConsumerStatefulWidget {
   final String? initialPlotName;
@@ -67,7 +68,7 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
     super.dispose();
   }
 
-  void _beginScan() {
+  Future<void> _beginScan() async {
     FocusScope.of(context).unfocus();
 
     if (!ref.read(bleConnectionProvider).isConnected) {
@@ -88,18 +89,77 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
     setState(() => _currentView = 1);
     _radarController.repeat();
 
-    _finalScanRecord = SoilMockGenerator.generateMockScan(
-      plotName: _plotNameController.text.trim(),
-      soilType: _selectedSoilType!,
-      overrideId: widget.updateId,
-    );
-
-    Future.delayed(const Duration(seconds: 4), () {
+    // ── Debug mode: use mock data ──────────────────────────────────────────
+    if (kBleDebugMode) {
+      _finalScanRecord = SoilMockGenerator.generateMockScan(
+        plotName: _plotNameController.text.trim(),
+        soilType: _selectedSoilType!,
+        overrideId: widget.updateId,
+      );
+      await Future.delayed(const Duration(seconds: 3));
       if (mounted) {
         _radarController.stop();
         setState(() => _currentView = 2);
       }
-    });
+      return;
+    }
+
+    // ── Production: read from Pi over BLE ─────────────────────────────────
+    try {
+      final reading = await ref
+          .read(bleServiceProvider)
+          .readSoilScan(timeout: const Duration(seconds: 15));
+
+      final plotName = _plotNameController.text.trim().isEmpty
+          ? 'Unnamed Plot'
+          : _plotNameController.text.trim();
+
+      // Evaluate health using the same thresholds as SoilMockGenerator
+      final isHealthy = reading.soilPh >= 5.8 &&
+          reading.soilPh <= 7.5 &&
+          reading.nitrogen >= 40 &&
+          reading.phosphorus >= 25 &&
+          reading.potassium >= 30;
+
+      _finalScanRecord = ScanRecord(
+        id: widget.updateId,
+        plotName: plotName,
+        soilType: _selectedSoilType!,
+        timestamp: DateTime.now().toIso8601String(),
+        soilPh: reading.soilPh,
+        moisture: reading.moisture,
+        temperature: reading.soilTemp,
+        ecLevel: reading.ecLevel,
+        nitrogen: reading.nitrogen,
+        phosphorus: reading.phosphorus,
+        potassium: reading.potassium,
+        healthStatus: isHealthy ? 'Healthy' : 'Unhealthy',
+        cropRecommendation: isHealthy
+            ? 'Tomato, Maize, Onion, Pechay, Radish, Cabbage, Pepper, Beans'
+            : 'Spread organic compost, Apply bio-fertilizers, Use mulching techniques, Practice crop rotation, Add agricultural lime, Integrate green manure, Deep soil aeration, Balanced organic NPK application',
+      );
+
+      if (mounted) {
+        _radarController.stop();
+        setState(() => _currentView = 2);
+      }
+    } catch (e) {
+      if (mounted) {
+        _radarController.stop();
+        setState(() => _currentView = 0);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().contains('TimeoutException')
+                  ? 'Scan timed out. Check the Pi sensor and try again.'
+                  : 'Scan failed: $e',
+            ),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
   void _saveRecord() async {

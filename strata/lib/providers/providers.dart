@@ -2,8 +2,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:strata/database/database_service.dart';
+import 'package:strata/services/ble_service.dart';
 
-// --- Theme Mode State ---
+// ── Theme Mode ────────────────────────────────────────────────────────────────
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   ThemeModeNotifier() : super(ThemeMode.system);
 
@@ -12,47 +13,60 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 }
 
-final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
-  ref,
-) {
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
   return ThemeModeNotifier();
 });
 
-// --- BLE Connection State ---
+// ── BLE Service singleton provider ───────────────────────────────────────────
+final bleServiceProvider = Provider<BleService>((ref) {
+  final service = BleService.instance;
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+// ── BLE Connection State ──────────────────────────────────────────────────────
 class BleConnectionState {
   final bool isConnected;
-  final String deviceId;
+  final String deviceName;
 
-  BleConnectionState({this.isConnected = false, this.deviceId = ''});
+  const BleConnectionState({
+    this.isConnected = false,
+    this.deviceName = '',
+  });
 }
 
 class BleConnectionNotifier extends StateNotifier<BleConnectionState> {
-  BleConnectionNotifier()
-    : super(BleConnectionState(isConnected: false, deviceId: ''));
+  final BleService _ble;
 
-  void connectToPi() {
-    state = BleConnectionState(isConnected: true, deviceId: 'strata-rpc-pi');
+  BleConnectionNotifier(this._ble)
+      : super(const BleConnectionState()) {
+    // Keep state in sync with real BLE events from BleService
+    _ble.connectionStream.listen((connected) {
+      state = BleConnectionState(
+        isConnected: connected,
+        deviceName: connected ? _ble.deviceName : '',
+      );
+    });
   }
 
-  void disconnect() {
-    state = BleConnectionState(isConnected: false, deviceId: '');
+  /// Called by PairingScreen after BleService.connectTo() succeeds.
+  void onConnected(String deviceName) {
+    state = BleConnectionState(isConnected: true, deviceName: deviceName);
   }
 
-  void toggleConnection() {
-    if (state.isConnected) {
-      disconnect();
-    } else {
-      connectToPi();
-    }
+  void onDisconnected() {
+    state = const BleConnectionState();
   }
 }
 
 final bleConnectionProvider =
     StateNotifierProvider<BleConnectionNotifier, BleConnectionState>((ref) {
-      return BleConnectionNotifier();
-    });
+  final ble = ref.watch(bleServiceProvider);
+  return BleConnectionNotifier(ble);
+});
 
-// --- Soil Evaluation & Mocking Provider ---
+// ── Soil Mock Generator (used only when kBleDebugMode = true) ────────────────
 class SoilMockGenerator {
   static ScanRecord generateMockScan({
     required String plotName,
@@ -61,21 +75,17 @@ class SoilMockGenerator {
   }) {
     final rand = Random();
 
-    // Easter Egg for testing: if plotName is "unhealthy", force poor soil stats
     bool isPoor = rand.nextInt(100) < 40;
     if (plotName.toLowerCase() == 'unhealthy') {
       isPoor = true;
     }
 
     final phLevel =
-        isPoor
-            ? (rand.nextDouble() * 2 + 4.0)
-            : (rand.nextDouble() * 1.5 + 6.0);
+        isPoor ? (rand.nextDouble() * 2 + 4.0) : (rand.nextDouble() * 1.5 + 6.0);
     final n = isPoor ? rand.nextInt(35) : 50 + rand.nextInt(50);
     final p = isPoor ? rand.nextInt(25) : 30 + rand.nextInt(40);
     final k = isPoor ? rand.nextInt(20) : 40 + rand.nextInt(40);
 
-    // Evaluate based on realistic thresholds
     final isHealthy =
         phLevel >= 5.8 && phLevel <= 7.5 && n >= 40 && p >= 25 && k >= 30;
 
@@ -92,10 +102,9 @@ class SoilMockGenerator {
       phosphorus: p,
       potassium: k,
       healthStatus: isHealthy ? 'Healthy' : 'Unhealthy',
-      cropRecommendation:
-          isHealthy
-              ? 'Tomato, Maize, Onion, Pechay, Radish, Cabbage, Pepper, Beans'
-              : 'Spread organic compost, Apply bio-fertilizers, Use mulching techniques, Practice crop rotation, Add agricultural lime, Integrate green manure, Deep soil aeration, Balanced organic NPK application',
+      cropRecommendation: isHealthy
+          ? 'Tomato, Maize, Onion, Pechay, Radish, Cabbage, Pepper, Beans'
+          : 'Spread organic compost, Apply bio-fertilizers, Use mulching techniques, Practice crop rotation, Add agricultural lime, Integrate green manure, Deep soil aeration, Balanced organic NPK application',
     );
   }
 }
