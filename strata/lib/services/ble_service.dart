@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Set to true to use SoilMockGenerator instead of the real Pi hardware.
@@ -97,11 +99,16 @@ class BleService {
 
   /// Scans for a device advertising the Strata service UUID.
   /// Calls [onDeviceFound] for each candidate device found.
-  /// Returns when [stopScan] is called or after [timeout].
+  /// returns when [stopScan] is called or after [timeout].
   Future<void> startScan({
     Duration timeout = const Duration(seconds: 15),
     required void Function(ScanResult result) onDeviceFound,
   }) async {
+    final hasPerms = await requestPermissions();
+    if (!hasPerms) {
+      throw Exception('Bluetooth permissions not granted.');
+    }
+
     try {
       await FlutterBluePlus.startScan(
         withServices: [Guid(StrataUUIDs.service)],
@@ -289,6 +296,25 @@ class BleService {
       cpuTemp: double.tryParse(tempRaw) ?? 0.0,
       battery: int.tryParse(battRaw) ?? 0,
     );
+  }
+
+  // ── Permissions ───────────────────────────────────────────────────────────
+
+  /// Requests necessary Bluetooth and Location permissions (Android 12+).
+  Future<bool> requestPermissions() async {
+    if (!Platform.isAndroid) return true;
+
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.location,
+    ].request();
+
+    final ok = statuses[Permission.bluetoothScan]?.isGranted == true &&
+        statuses[Permission.bluetoothConnect]?.isGranted == true;
+
+    debugPrint('[BleService] Permissions: $ok');
+    return ok;
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
