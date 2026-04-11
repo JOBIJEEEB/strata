@@ -143,10 +143,12 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Spacer(flex: 2),
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Spacer(flex: 2),
 
               // ── Logo ──────────────────────────────────────────────────────
               Semantics(
@@ -245,8 +247,9 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildDeviceList(
       TextTheme textTheme, ColorScheme colorScheme, bool isDark) {
