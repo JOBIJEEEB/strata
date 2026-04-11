@@ -172,35 +172,53 @@ class HomeTab extends ConsumerWidget {
                         Row(
                           children: [
                             Expanded(
-                              child: _DiagnosticMetric(
-                                icon: Icons.battery_charging_full_rounded,
-                                label: 'UPS HAT',
-                                value: isConnected ? '85%' : '---',
-                                color:
-                                    isConnected
-                                        ? AppColors.primary
-                                        : Colors.grey,
+                              child: Consumer(
+                                builder: (context, ref, child) {
+                                  final diagAsyncNotifier = ref.watch(bleDiagnosticsProvider);
+                                  return _DiagnosticMetric(
+                                    icon: Icons.battery_charging_full_rounded,
+                                    label: 'UPS HAT',
+                                    value: isConnected 
+                                      ? '${diagAsyncNotifier.valueOrNull?.battery ?? 0}%' 
+                                      : '---',
+                                    color: isConnected ? AppColors.primary : Colors.grey,
+                                  );
+                                },
                               ),
                             ),
                             Expanded(
-                              child: _DiagnosticMetric(
-                                icon: Icons.thermostat_rounded,
-                                label: 'Pi Temp',
-                                value: isConnected ? '42°C' : '---',
-                                color:
-                                    isConnected ? Colors.orange : Colors.grey,
+                              child: Consumer(
+                                builder: (context, ref, child) {
+                                  final diagAsyncNotifier = ref.watch(bleDiagnosticsProvider);
+                                  return _DiagnosticMetric(
+                                    icon: Icons.thermostat_rounded,
+                                    label: 'Pi Temp',
+                                    value: isConnected 
+                                      ? '${diagAsyncNotifier.valueOrNull?.cpuTemp ?? 0.0}°C' 
+                                      : '---',
+                                    color: isConnected ? Colors.orange : Colors.grey,
+                                  );
+                                },
                               ),
                             ),
                             Expanded(
-                              child: _DiagnosticMetric(
-                                icon: Icons.memory_rounded,
-                                label: 'CPU Load',
-                                value: isConnected ? '12%' : '---',
-                                color: isConnected ? Colors.blue : Colors.grey,
+                              child: Consumer(
+                                builder: (context, ref, child) {
+                                  final diagAsyncNotifier = ref.watch(bleDiagnosticsProvider);
+                                  return _DiagnosticMetric(
+                                    icon: Icons.memory_rounded,
+                                    label: 'CPU Load',
+                                    value: isConnected 
+                                      ? '${diagAsyncNotifier.valueOrNull?.cpuUsage ?? 0.0}%' 
+                                      : '---',
+                                    color: isConnected ? Colors.blue : Colors.grey,
+                                  );
+                                },
                               ),
                             ),
                           ],
                         ),
+
                       ],
                     ),
                   ),
