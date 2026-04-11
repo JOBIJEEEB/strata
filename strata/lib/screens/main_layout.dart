@@ -32,21 +32,14 @@ class _MainLayoutState extends State<MainLayout> {
     ),
   ];
 
-  static const List<Widget> _pages = [
-    HomeTab(),
-    HistoryTab(),
-    SettingsTab(),
-  ];
+  static const List<Widget> _pages = [HomeTab(), HistoryTab(), SettingsTab()];
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(
@@ -59,15 +52,16 @@ class _MainLayoutState extends State<MainLayout> {
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: (index) => setState(() => _selectedIndex = index),
-          items: _tabs
-              .map(
-                (tab) => BottomNavigationBarItem(
-                  icon: Icon(tab.icon),
-                  activeIcon: Icon(tab.activeIcon),
-                  label: tab.label,
-                ),
-              )
-              .toList(),
+          items:
+              _tabs
+                  .map(
+                    (tab) => BottomNavigationBarItem(
+                      icon: Icon(tab.icon),
+                      activeIcon: Icon(tab.activeIcon),
+                      label: tab.label,
+                    ),
+                  )
+                  .toList(),
         ),
       ),
     );

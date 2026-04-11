@@ -4,6 +4,7 @@ import 'package:strata/screens/loading_screen.dart';
 import 'package:strata/screens/pairing_screen.dart';
 import 'package:strata/screens/main_layout.dart';
 import 'package:strata/screens/scan_flow_screen.dart';
+import 'package:strata/screens/plot_history_screen.dart';
 import 'package:strata/database/database_service.dart';
 
 // ── Route path constants ────────────────────────────────────────────────────
@@ -12,8 +13,9 @@ class AppRoutes {
 
   static const String loading = '/loading';
   static const String pairing = '/pairing';
-  static const String scan    = '/scan';
-  static const String main    = '/';
+  static const String scan = '/scan';
+  static const String plotHistory = '/plot-history';
+  static const String main = '/';
 }
 
 // ── Router definition ───────────────────────────────────────────────────────
@@ -24,26 +26,23 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.loading,
       name: 'loading',
-      pageBuilder: (context, state) => _fadeTransition(
-        key: state.pageKey,
-        child: const LoadingScreen(),
-      ),
+      pageBuilder:
+          (context, state) =>
+              _fadeTransition(key: state.pageKey, child: const LoadingScreen()),
     ),
     GoRoute(
       path: AppRoutes.pairing,
       name: 'pairing',
-      pageBuilder: (context, state) => _fadeTransition(
-        key: state.pageKey,
-        child: const PairingScreen(),
-      ),
+      pageBuilder:
+          (context, state) =>
+              _fadeTransition(key: state.pageKey, child: const PairingScreen()),
     ),
     GoRoute(
       path: AppRoutes.main,
       name: 'main',
-      pageBuilder: (context, state) => _fadeTransition(
-        key: state.pageKey,
-        child: const MainLayout(),
-      ),
+      pageBuilder:
+          (context, state) =>
+              _fadeTransition(key: state.pageKey, child: const MainLayout()),
     ),
     GoRoute(
       path: AppRoutes.scan,
@@ -69,21 +68,51 @@ final GoRouter appRouter = GoRouter(
             const begin = Offset(0.0, 1.0);
             const end = Offset.zero;
             const curve = Curves.easeOutCubic;
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            return SlideTransition(position: animation.drive(tween), child: child);
+            var tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: curve));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.plotHistory,
+      name: 'plot-history',
+      pageBuilder: (context, state) {
+        final extras = state.extra as Map<String, dynamic>;
+        final plotName = extras['plotName'] as String;
+        final scans = extras['scans'] as List<ScanRecord>;
+
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: PlotHistoryScreen(plotName: plotName, scans: scans),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.easeOutCubic;
+            final tween = Tween(begin: begin, end: end)
+                .chain(CurveTween(curve: curve));
+            return SlideTransition(
+                position: animation.drive(tween), child: child);
           },
         );
       },
     ),
   ],
-  errorBuilder: (context, state) => Scaffold(
-    body: Center(
-      child: Text(
-        'Page not found: ${state.error}',
-        style: const TextStyle(color: Colors.red),
+  errorBuilder:
+      (context, state) => Scaffold(
+        body: Center(
+          child: Text(
+            'Page not found: ${state.error}',
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
       ),
-    ),
-  ),
 );
 
 // ── Shared fade transition helper ───────────────────────────────────────────

@@ -12,7 +12,9 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 }
 
-final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
+final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
+  ref,
+) {
   return ThemeModeNotifier();
 });
 
@@ -25,7 +27,8 @@ class BleConnectionState {
 }
 
 class BleConnectionNotifier extends StateNotifier<BleConnectionState> {
-  BleConnectionNotifier() : super(BleConnectionState(isConnected: false, deviceId: ''));
+  BleConnectionNotifier()
+    : super(BleConnectionState(isConnected: false, deviceId: ''));
 
   void connectToPi() {
     state = BleConnectionState(isConnected: true, deviceId: 'strata-rpc-pi');
@@ -44,29 +47,38 @@ class BleConnectionNotifier extends StateNotifier<BleConnectionState> {
   }
 }
 
-final bleConnectionProvider = StateNotifierProvider<BleConnectionNotifier, BleConnectionState>((ref) {
-  return BleConnectionNotifier();
-});
+final bleConnectionProvider =
+    StateNotifierProvider<BleConnectionNotifier, BleConnectionState>((ref) {
+      return BleConnectionNotifier();
+    });
 
 // --- Soil Evaluation & Mocking Provider ---
 class SoilMockGenerator {
-  static ScanRecord generateMockScan({required String plotName, required String soilType, int? overrideId}) {
+  static ScanRecord generateMockScan({
+    required String plotName,
+    required String soilType,
+    int? overrideId,
+  }) {
     final rand = Random();
-    
+
     // Easter Egg for testing: if plotName is "unhealthy", force poor soil stats
-    bool isPoor = rand.nextInt(100) < 40; 
+    bool isPoor = rand.nextInt(100) < 40;
     if (plotName.toLowerCase() == 'unhealthy') {
       isPoor = true;
     }
-    
-    final phLevel = isPoor ? (rand.nextDouble() * 2 + 4.0) : (rand.nextDouble() * 1.5 + 6.0);
+
+    final phLevel =
+        isPoor
+            ? (rand.nextDouble() * 2 + 4.0)
+            : (rand.nextDouble() * 1.5 + 6.0);
     final n = isPoor ? rand.nextInt(35) : 50 + rand.nextInt(50);
     final p = isPoor ? rand.nextInt(25) : 30 + rand.nextInt(40);
     final k = isPoor ? rand.nextInt(20) : 40 + rand.nextInt(40);
-    
+
     // Evaluate based on realistic thresholds
-    final isHealthy = phLevel >= 5.8 && phLevel <= 7.5 && n >= 40 && p >= 25 && k >= 30;
-    
+    final isHealthy =
+        phLevel >= 5.8 && phLevel <= 7.5 && n >= 40 && p >= 25 && k >= 30;
+
     return ScanRecord(
       id: overrideId,
       plotName: plotName,
@@ -80,9 +92,10 @@ class SoilMockGenerator {
       phosphorus: p,
       potassium: k,
       healthStatus: isHealthy ? 'Healthy' : 'Unhealthy',
-      cropRecommendation: isHealthy 
-          ? 'Tomato, Maize, Onion, Pechay, Radish, Cabbage, Pepper, Beans' 
-          : 'Spread organic compost, Apply bio-fertilizers, Use mulching techniques, Practice crop rotation, Add agricultural lime, Integrate green manure, Deep soil aeration, Balanced organic NPK application',
+      cropRecommendation:
+          isHealthy
+              ? 'Tomato, Maize, Onion, Pechay, Radish, Cabbage, Pepper, Beans'
+              : 'Spread organic compost, Apply bio-fertilizers, Use mulching techniques, Practice crop rotation, Add agricultural lime, Integrate green manure, Deep soil aeration, Balanced organic NPK application',
     );
   }
 }

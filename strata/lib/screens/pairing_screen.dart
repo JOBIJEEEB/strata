@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:strata/theme/app_theme.dart';
+import 'package:strata/theme/components.dart';
 
 /// Placeholder pairing screen — BLE logic will be injected later.
 class PairingScreen extends StatefulWidget {
@@ -52,19 +53,27 @@ class _PairingScreenState extends State<PairingScreen>
                 const Spacer(flex: 2),
 
                 // ── Logo ────────────────────────────────────────────
-                Image.asset(
-                  'assets/strata_logo.png',
-                  width: 120,
-                  height: 120,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Container(
+                Semantics(
+                  label: 'Strata Logo',
+                  child: Image.asset(
+                    'assets/strata_logo.png',
                     width: 120,
                     height: 120,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: const Icon(Icons.eco_rounded, size: 56, color: AppColors.primary),
+                    fit: BoxFit.contain,
+                    errorBuilder:
+                        (_, __, ___) => Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: const Icon(
+                            Icons.eco_rounded,
+                            size: 56,
+                            color: AppColors.primary,
+                          ),
+                        ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -89,7 +98,9 @@ class _PairingScreenState extends State<PairingScreen>
                     height: 140,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
+                      color: AppColors.primary.withValues(
+                        alpha: isDark ? 0.15 : 0.08,
+                      ),
                       border: Border.all(
                         color: AppColors.primary.withValues(alpha: 0.35),
                         width: 2,
@@ -118,9 +129,9 @@ class _PairingScreenState extends State<PairingScreen>
                 // ── Skip / manual advance (placeholder until BLE connects) ──
                 Column(
                   children: [
-                    ElevatedButton(
+                    StrataButton(
+                      label: 'Simulate Connection',
                       onPressed: () => context.goNamed('main'),
-                      child: const Text('Simulate Connection'),
                     ),
                     const SizedBox(height: 12),
                     TextButton(

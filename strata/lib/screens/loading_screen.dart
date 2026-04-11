@@ -25,9 +25,10 @@ class _LoadingScreenState extends State<LoadingScreen>
     );
 
     _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _scaleAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _scaleAnim = Tween<double>(
+      begin: 0.85,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _controller.forward();
     Future.delayed(const Duration(milliseconds: 2500), () {
@@ -46,7 +47,8 @@ class _LoadingScreenState extends State<LoadingScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor:
+          isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnim,
@@ -61,19 +63,20 @@ class _LoadingScreenState extends State<LoadingScreen>
                   width: 200,
                   height: 200,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                    child: const Icon(
-                      Icons.eco_rounded,
-                      size: 80,
-                      color: AppColors.primary,
-                    ),
-                  ),
+                  errorBuilder:
+                      (_, __, ___) => Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                        child: const Icon(
+                          Icons.eco_rounded,
+                          size: 80,
+                          color: AppColors.primary,
+                        ),
+                      ),
                 ),
                 const SizedBox(height: 32),
 
@@ -94,9 +97,12 @@ class _LoadingScreenState extends State<LoadingScreen>
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
                     letterSpacing: 1.5,
-                    color: isDark
-                        ? AppColors.onBackgroundDark.withValues(alpha: 0.6)
-                        : AppColors.onBackgroundLight.withValues(alpha: 0.5),
+                    color:
+                        isDark
+                            ? AppColors.onBackgroundDark.withValues(alpha: 0.6)
+                            : AppColors.onBackgroundLight.withValues(
+                              alpha: 0.5,
+                            ),
                   ),
                 ),
                 const SizedBox(height: 64),
@@ -107,7 +113,9 @@ class _LoadingScreenState extends State<LoadingScreen>
                   height: 28,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
+                    ),
                     backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                   ),
                 ),

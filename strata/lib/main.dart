@@ -6,9 +6,7 @@ import 'package:strata/providers/providers.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    const ProviderScope(child: StrataApp()),
-  );
+  runApp(const ProviderScope(child: StrataApp()));
 }
 
 class StrataApp extends ConsumerWidget {

@@ -20,9 +20,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     await DatabaseService.instance.wipeDatabase();
     ref.invalidate(scansProvider);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Local database cleared.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Local database cleared.')));
     }
   }
 
@@ -44,12 +44,14 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     // Evaluate Theme Mode for the settings UI exclusively
     final currentThemeMode = ref.watch(themeModeProvider);
-    final isDark = currentThemeMode == ThemeMode.dark || 
-        (currentThemeMode == ThemeMode.system && Theme.of(context).brightness == Brightness.dark);
-    
+    final isDark =
+        currentThemeMode == ThemeMode.dark ||
+        (currentThemeMode == ThemeMode.system &&
+            Theme.of(context).brightness == Brightness.dark);
+
     // Watch precise Connection state
     final bleState = ref.watch(bleConnectionProvider);
 
@@ -59,7 +61,6 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         children: [
-
           // ── Hardware Setup ────────────────────────────────────
           const _SectionHeader(label: 'Hardware Setup'),
           _SettingsTile(
@@ -67,20 +68,27 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             label: bleState.isConnected ? 'Raspberry Pi' : 'Connect to Pi',
             subtitle: bleState.isConnected ? 'Connected' : 'Disconnected',
             isDark: isDark,
-            trailing: bleState.isConnected 
-              ? const Icon(Icons.check_circle, color: AppColors.primary)
-              : ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(80, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    ref.read(bleConnectionProvider.notifier).connectToPi();
-                  },
-                  child: const Text('Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
+            trailing:
+                bleState.isConnected
+                    ? const Icon(Icons.check_circle, color: AppColors.primary)
+                    : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(80, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        ref.read(bleConnectionProvider.notifier).connectToPi();
+                      },
+                      child: const Text(
+                        'Connect',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
             onTap: () {
               if (!bleState.isConnected) {
                 ref.read(bleConnectionProvider.notifier).connectToPi();
@@ -92,7 +100,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
           // ── App Preferences ────────────────────────────────────
           const _SectionHeader(label: 'App Preferences'),
-          
+
           // Primary Dark Mode Toggle tied into ThemeModeNotifier architecture
           _SettingsTile(
             icon: Icons.dark_mode_outlined,
@@ -100,9 +108,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             isDark: isDark,
             trailing: Switch(
               value: isDark,
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
               onChanged: (bool val) {
-                // Instantly flips the entire ecosystem tree layout 
+                // Instantly flips the entire ecosystem tree layout
                 ref.read(themeModeProvider.notifier).setDarkMode(val);
               },
             ),
@@ -113,7 +121,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             isDark: isDark,
             trailing: Switch(
               value: _notificationsEnabled,
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
               onChanged: (v) => setState(() => _notificationsEnabled = v),
             ),
           ),
@@ -126,26 +134,40 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             icon: Icons.delete_outline_rounded,
             label: 'Clear Local Database',
             isDark: isDark,
-            trailing: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 20),
+            trailing: const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.redAccent,
+              size: 20,
+            ),
             onTap: () {
-               showDialog(
-                 context: context,
-                 builder: (ctx) => AlertDialog(
-                   backgroundColor: isDark ? AppColors.cardDark : AppColors.surfaceLight,
-                   title: const Text('Clear Database'),
-                   content: const Text('Are you sure you want to delete all local scan records? This cannot be undone.'),
-                   actions: [
-                     TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-                     TextButton(
-                       onPressed: () {
-                         Navigator.pop(ctx);
-                         _wipeDatabase();
-                       }, 
-                       child: const Text('Delete All', style: TextStyle(color: Colors.redAccent)),
-                     ),
-                   ],
-                 )
-               );
+              showDialog(
+                context: context,
+                builder:
+                    (ctx) => AlertDialog(
+                      backgroundColor:
+                          isDark ? AppColors.cardDark : AppColors.surfaceLight,
+                      title: const Text('Clear Database'),
+                      content: const Text(
+                        'Are you sure you want to delete all local scan records? This cannot be undone.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _wipeDatabase();
+                          },
+                          child: const Text(
+                            'Delete All',
+                            style: TextStyle(color: Colors.redAccent),
+                          ),
+                        ),
+                      ],
+                    ),
+              );
             },
           ),
 
@@ -169,16 +191,20 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.15),
+                      color: Colors.orange.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.code_rounded, color: Colors.orange, size: 20),
+                    child: const Icon(
+                      Icons.code_rounded,
+                      color: Colors.orange,
+                      size: 20,
+                    ),
                   ),
                   title: Text('Developer Mode', style: textTheme.titleSmall),
                   subtitle: Text(
                     _devModeExpanded ? 'Tap to collapse' : 'Tap to expand',
                     style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(0.45),
+                      color: colorScheme.onSurface.withValues(alpha: 0.45),
                     ),
                   ),
                   trailing: AnimatedRotation(
@@ -186,7 +212,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                     duration: const Duration(milliseconds: 200),
                     child: const Icon(Icons.expand_more_rounded),
                   ),
-                  onTap: () => setState(() => _devModeExpanded = !_devModeExpanded),
+                  onTap:
+                      () =>
+                          setState(() => _devModeExpanded = !_devModeExpanded),
                 ),
                 if (_devModeExpanded) ...[
                   const Divider(height: 1, indent: 16, endIndent: 16),
@@ -197,8 +225,12 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                     isDark: isDark,
                     trailingOverride: Switch(
                       value: bleState.isConnected,
-                      activeColor: AppColors.primary,
-                      onChanged: (val) => ref.read(bleConnectionProvider.notifier).toggleConnection(),
+                      activeThumbColor: AppColors.primary,
+                      onChanged:
+                          (val) =>
+                              ref
+                                  .read(bleConnectionProvider.notifier)
+                                  .toggleConnection(),
                     ),
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
@@ -216,7 +248,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
           ),
 
           const SizedBox(height: 8),
-          
+
           // ── About ──────────────────────────────────
           const _SectionHeader(label: 'About'),
           _SettingsTile(
@@ -225,7 +257,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             isDark: isDark,
             trailing: Text('1.0.0+1', style: textTheme.bodyMedium),
           ),
-          
+
           const SizedBox(height: 32),
         ],
       ),
@@ -288,13 +320,16 @@ class _SettingsTile extends StatelessWidget {
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.12),
+            color: AppColors.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.primary, size: 20),
         ),
         title: Text(label, style: Theme.of(context).textTheme.titleSmall),
-        subtitle: subtitle != null ? Text(subtitle!, style: Theme.of(context).textTheme.bodySmall) : null,
+        subtitle:
+            subtitle != null
+                ? Text(subtitle!, style: Theme.of(context).textTheme.bodySmall)
+                : null,
         trailing: trailing,
         onTap: onTap,
       ),
@@ -309,7 +344,6 @@ class _DevOption extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.isDark,
-    this.isDestructive = false,
     this.trailingOverride,
     this.onTap,
   });
@@ -318,28 +352,30 @@ class _DevOption extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final bool isDark;
-  final bool isDestructive;
   final Widget? trailingOverride;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = isDestructive ? Colors.red : AppColors.primary;
+    final color = AppColors.primary;
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: Icon(icon, color: color, size: 20),
-      title: Text(label, style: textTheme.bodyMedium?.copyWith(
-        color: isDestructive ? Colors.red : null,
-      )),
-      subtitle: Text(subtitle, style: textTheme.bodySmall?.copyWith(
-        color: colorScheme.onSurface.withOpacity(0.4),
-      )),
-      trailing: trailingOverride ?? (onTap != null
-          ? const Icon(Icons.chevron_right_rounded, size: 18)
-          : null),
+      title: Text(label, style: textTheme.bodyMedium),
+      subtitle: Text(
+        subtitle,
+        style: textTheme.bodySmall?.copyWith(
+          color: colorScheme.onSurface.withValues(alpha: 0.4),
+        ),
+      ),
+      trailing:
+          trailingOverride ??
+          (onTap != null
+              ? const Icon(Icons.chevron_right_rounded, size: 18)
+              : null),
       onTap: onTap ?? () {},
     );
   }

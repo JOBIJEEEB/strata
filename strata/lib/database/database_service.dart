@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:csv/csv.dart';
+import 'package:flutter/foundation.dart'; // Add for debugPrint
 
 class ScanRecord {
   final int? id;
@@ -65,7 +66,8 @@ class ScanRecord {
       phosphorus: map['phosphorus']?.toInt() ?? 0,
       potassium: map['potassium']?.toInt() ?? 0,
       healthStatus: map['health_status'] ?? 'Healthy',
-      cropRecommendation: map['crop_recommendation'] ?? 'Tomato, Onion, Maize, or Pechay',
+      cropRecommendation:
+          map['crop_recommendation'] ?? 'Tomato, Onion, Maize, or Pechay',
     );
   }
 }
@@ -83,15 +85,20 @@ class DatabaseService {
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    try {
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, filePath);
 
-    return await openDatabase(
-      path,
-      version: 5, // Bumped for plot_name and soil_type inclusion
-      onCreate: _createDB,
-      onUpgrade: _upgradeDB,
-    );
+      return await openDatabase(
+        path,
+        version: 5,
+        onCreate: _createDB,
+        onUpgrade: _upgradeDB,
+      );
+    } catch (e) {
+      debugPrint('Error initializing DB: $e');
+      rethrow;
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -115,56 +122,131 @@ class DatabaseService {
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    // Applying progressive DB migration patches safely
     if (oldVersion < 3) {
-      await db.execute("ALTER TABLE scans ADD COLUMN nitrogen INTEGER DEFAULT 0");
-      await db.execute("ALTER TABLE scans ADD COLUMN phosphorus INTEGER DEFAULT 0");
-      await db.execute("ALTER TABLE scans ADD COLUMN potassium INTEGER DEFAULT 0");
+      await db.execute(
+        "ALTER TABLE scans ADD COLUMN nitrogen INTEGER DEFAULT 0",
+      );
+      await db.execute(
+        "ALTER TABLE scans ADD COLUMN phosphorus INTEGER DEFAULT 0",
+      );
+      await db.execute(
+        "ALTER TABLE scans ADD COLUMN potassium INTEGER DEFAULT 0",
+      );
     }
     if (oldVersion < 4) {
-      await db.execute("ALTER TABLE scans ADD COLUMN health_status TEXT DEFAULT 'Healthy'");
+      await db.execute(
+        "ALTER TABLE scans ADD COLUMN health_status TEXT DEFAULT 'Healthy'",
+      );
     }
     if (oldVersion < 5) {
-      await db.execute("ALTER TABLE scans ADD COLUMN plot_name TEXT DEFAULT 'Unnamed Plot'");
-      await db.execute("ALTER TABLE scans ADD COLUMN soil_type TEXT DEFAULT 'Unknown'");
+      await db.execute(
+        "ALTER TABLE scans ADD COLUMN plot_name TEXT DEFAULT 'Unnamed Plot'",
+      );
+      await db.execute(
+        "ALTER TABLE scans ADD COLUMN soil_type TEXT DEFAULT 'Unknown'",
+      );
     }
   }
 
   Future<int> insertScan(ScanRecord scan) async {
-    final db = await instance.database;
-    return await db.insert('scans', scan.toMap());
+    try {
+      final db = await instance.database;
+      return await db.insert('scans', scan.toMap());
+    } catch (e) {
+      debugPrint('Error inserting scan: $e');
+      return -1;
+    }
   }
 
   Future<int> updateScan(ScanRecord scan) async {
-    final db = await instance.database;
-    return await db.update('scans', scan.toMap(), where: 'id = ?', whereArgs: [scan.id]);
+    try {
+      final db = await instance.database;
+      return await db.update(
+        'scans',
+        scan.toMap(),
+        where: 'id = ?',
+        whereArgs: [scan.id],
+      );
+    } catch (e) {
+      debugPrint('Error updating scan: $e');
+      return -1;
+    }
   }
 
   Future<int> deleteScan(int id) async {
-    final db = await instance.database;
-    return await db.delete('scans', where: 'id = ?', whereArgs: [id]);
+    try {
+      final db = await instance.database;
+      return await db.delete('scans', where: 'id = ?', whereArgs: [id]);
+    } catch (e) {
+      debugPrint('Error deleting scan: $e');
+      return -1;
+    }
   }
 
   Future<List<ScanRecord>> fetchScans() async {
-    final db = await instance.database;
-    final result = await db.query('scans', orderBy: 'timestamp DESC');
-    return result.map((map) => ScanRecord.fromMap(map)).toList();
+    try {
+      final db = await instance.database;
+      final result = await db.query('scans', orderBy: 'timestamp DESC');
+      return result.map((map) => ScanRecord.fromMap(map)).toList();
+    } catch (e) {
+      debugPrint('Error fetching scans: $e');
+      return [];
+    }
   }
 
-  Future<void> wipeDatabase() async {
-    final db = await instance.database;
-    await db.delete('scans');
+  Future<bool> wipeDatabase() async {
+    try {
+      final db = await instance.database;
+      await db.delete('scans');
+      return true;
+    } catch (e) {
+      debugPrint('Error wiping database: $e');
+      return false;
+    }
   }
 
   Future<String> exportToCsv() async {
-    final scans = await fetchScans();
-    List<List<dynamic>> rows = [];
-    rows.add(["ID", "Plot Name", "Soil Type", "Timestamp", "pH", "Moisture (%)", "Temperature (C)", "EC (mS/cm)", "Nitrogen (N)", "Phosphorus (P)", "Potassium (K)", "Status", "Recommendation"]);
-    for (var scan in scans) {
+    try {
+      final scans = await fetchScans();
+      if (scans.isEmpty) return '';
+
+      List<List<dynamic>> rows = [];
       rows.add([
-        scan.id, scan.plotName, scan.soilType, scan.timestamp, scan.soilPh, scan.moisture, scan.temperature, scan.ecLevel, scan.nitrogen, scan.phosphorus, scan.potassium, scan.healthStatus, scan.cropRecommendation
+        "ID",
+        "Plot Name",
+        "Soil Type",
+        "Timestamp",
+        "pH",
+        "Moisture (%)",
+        "Temperature (C)",
+        "EC (mS/cm)",
+        "Nitrogen (N)",
+        "Phosphorus (P)",
+        "Potassium (K)",
+        "Status",
+        "Recommendation",
       ]);
+      for (var scan in scans) {
+        rows.add([
+          scan.id,
+          scan.plotName,
+          scan.soilType,
+          scan.timestamp,
+          scan.soilPh,
+          scan.moisture,
+          scan.temperature,
+          scan.ecLevel,
+          scan.nitrogen,
+          scan.phosphorus,
+          scan.potassium,
+          scan.healthStatus,
+          scan.cropRecommendation,
+        ]);
+      }
+      return const ListToCsvConverter().convert(rows);
+    } catch (e) {
+      debugPrint('Error exporting to CSV: $e');
+      return '';
     }
-    return const ListToCsvConverter().convert(rows);
   }
 }
