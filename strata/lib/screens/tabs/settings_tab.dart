@@ -257,7 +257,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             icon: Icons.info_outline_rounded,
             label: 'App Version',
             isDark: isDark,
-            trailing: Text('1.0.0+1', style: textTheme.bodyMedium),
+            trailing: Text('1.0.2', style: textTheme.bodyMedium),
           ),
 
           const SizedBox(height: 32),

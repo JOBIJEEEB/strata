@@ -108,3 +108,21 @@ class SoilMockGenerator {
     );
   }
 }
+
+final bleDiagnosticsProvider = StreamProvider<BleDiagnostics>((ref) async* {
+  final ble = ref.watch(bleServiceProvider);
+  final isConnected = ref.watch(bleConnectionProvider).isConnected;
+
+  if (!isConnected) {
+    yield const BleDiagnostics(cpuUsage: 0, cpuTemp: 0, battery: 0);
+    return;
+  }
+
+  while (true) {
+    try {
+      final diag = await ble.readDiagnostics();
+      yield diag;
+    } catch (_) {}
+    await Future.delayed(const Duration(seconds: 5));
+  }
+});
