@@ -6,6 +6,7 @@ import 'package:strata/theme/components.dart';
 import 'package:strata/providers/providers.dart';
 import 'package:strata/database/database_service.dart';
 import 'package:strata/screens/tabs/history_tab.dart'; // To access scansProvider
+import 'package:strata/services/ble_service.dart';
 
 class HomeTab extends ConsumerWidget {
   const HomeTab({super.key});
@@ -139,30 +140,33 @@ class HomeTab extends ConsumerWidget {
                                 ],
                               ),
                             ),
-                            if (!isConnected) ...[
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 0,
-                                  ),
-                                  minimumSize: const Size(0, 36),
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 0,
                                 ),
-                                onPressed:
-                                    () => context.push('/pairing'),
-                                child: const Text(
-                                  'Connect',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                minimumSize: const Size(0, 36),
+                                backgroundColor: isConnected ? Colors.redAccent : AppColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () async {
+                                if (isConnected) {
+                                  await BleService.instance.disconnect();
+                                } else {
+                                  context.push('/pairing');
+                                }
+                              },
+                              child: Text(
+                                isConnected ? 'Disconnect' : 'Connect',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ],
+                            ),
                           ],
                         ),
                         const Padding(
@@ -177,7 +181,7 @@ class HomeTab extends ConsumerWidget {
                                   final diagAsyncNotifier = ref.watch(bleDiagnosticsProvider);
                                   return _DiagnosticMetric(
                                     icon: Icons.battery_charging_full_rounded,
-                                    label: 'UPS HAT',
+                                    label: 'Battery',
                                     value: isConnected 
                                       ? '${diagAsyncNotifier.valueOrNull?.battery ?? 0}%' 
                                       : '---',
@@ -192,11 +196,11 @@ class HomeTab extends ConsumerWidget {
                                   final diagAsyncNotifier = ref.watch(bleDiagnosticsProvider);
                                   return _DiagnosticMetric(
                                     icon: Icons.thermostat_rounded,
-                                    label: 'Pi Temp',
+                                    label: 'CPU Temp',
                                     value: isConnected 
                                       ? '${diagAsyncNotifier.valueOrNull?.cpuTemp ?? 0.0}°C' 
                                       : '---',
-                                    color: isConnected ? Colors.orange : Colors.grey,
+                                    color: isConnected ? Colors.amber : Colors.grey,
                                   );
                                 },
                               ),
@@ -468,7 +472,7 @@ class HomeTab extends ConsumerWidget {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      scan.cropRecommendation.split(',').first,
+                                      isHealthy ? 'Healthy Soil' : 'Rehabilitation needed',
                                       style: textTheme.bodySmall?.copyWith(
                                         color:
                                             isHealthy

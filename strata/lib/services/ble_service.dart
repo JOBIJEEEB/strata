@@ -8,7 +8,7 @@ import 'dart:io';
 // Set to true to use SoilMockGenerator instead of the real Pi hardware.
 // Set to false for production / real hardware testing.
 // ─────────────────────────────────────────────────────────────────────────────
-const bool kBleDebugMode = false;
+const bool kBleDebugMode = true;
 
 // ── UUID constants ────────────────────────────────────────────────────────────
 class StrataUUIDs {

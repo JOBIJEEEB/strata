@@ -5,6 +5,8 @@ import 'package:strata/screens/pairing_screen.dart';
 import 'package:strata/screens/main_layout.dart';
 import 'package:strata/screens/scan_flow_screen.dart';
 import 'package:strata/screens/plot_history_screen.dart';
+import 'package:strata/screens/rehab_protocols_screen.dart';
+import 'package:strata/screens/recommended_crops_screen.dart';
 import 'package:strata/database/database_service.dart';
 
 // ── Route path constants ────────────────────────────────────────────────────
@@ -15,6 +17,8 @@ class AppRoutes {
   static const String pairing = '/pairing';
   static const String scan = '/scan';
   static const String plotHistory = '/plot-history';
+  static const String rehabProtocols = '/rehab-protocols';
+  static const String recommendedCrops = '/recommended-crops';
   static const String main = '/';
 }
 
@@ -99,6 +103,46 @@ final GoRouter appRouter = GoRouter(
                 .chain(CurveTween(curve: curve));
             return SlideTransition(
                 position: animation.drive(tween), child: child);
+          },
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.rehabProtocols,
+      name: 'rehab-protocols',
+      pageBuilder: (context, state) {
+        final extras = state.extra as Map<String, dynamic>;
+        final scanRecord = extras['scanRecord'] as ScanRecord;
+
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: RehabProtocolsScreen(scanRecord: scanRecord),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(0.0, 1.0);
+            const end = Offset.zero;
+            const curve = Curves.easeOutCubic;
+            final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            return SlideTransition(position: animation.drive(tween), child: child);
+          },
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.recommendedCrops,
+      name: 'recommended-crops',
+      pageBuilder: (context, state) {
+        final extras = state.extra as Map<String, dynamic>;
+        final scanRecord = extras['scanRecord'] as ScanRecord;
+
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: RecommendedCropsScreen(scanRecord: scanRecord),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(0.0, 1.0);
+            const end = Offset.zero;
+            const curve = Curves.easeOutCubic;
+            final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            return SlideTransition(position: animation.drive(tween), child: child);
           },
         );
       },

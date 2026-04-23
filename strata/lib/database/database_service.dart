@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:csv/csv.dart';
-import 'package:flutter/foundation.dart'; // Add for debugPrint
+import 'package:flutter/foundation.dart'; 
 
 class ScanRecord {
   final int? id;
@@ -206,8 +206,12 @@ class DatabaseService {
   }
 
   Future<String> exportToCsv() async {
+    final scans = await fetchScans();
+    return await exportScansToCsv(scans);
+  }
+
+  Future<String> exportScansToCsv(List<ScanRecord> scans) async {
     try {
-      final scans = await fetchScans();
       if (scans.isEmpty) return '';
 
       List<List<dynamic>> rows = [];

@@ -37,7 +37,7 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
   late AnimationController _radarController;
   ScanRecord? _finalScanRecord;
   bool _isCropsExpanded = false;
-  bool _isRehabExpanded = false;
+
 
   @override
   void initState() {
@@ -486,12 +486,29 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
                 ),
                 const SizedBox(height: 16),
                 if (isHealthy)
-                  _buildCropRecommendation(
-                    scan.cropRecommendation,
-                    inHeader: true,
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.primary,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    icon: const Icon(Icons.eco_rounded),
+                    label: const Text('View Recommended Crops', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () => context.push('/recommended-crops', extra: {'scanRecord': scan}),
                   )
                 else
-                  _buildRehabProtocols(scan.cropRecommendation, inHeader: true),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFFD32F2F),
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    icon: const Icon(Icons.medical_services_rounded),
+                    label: const Text('View Rehabilitation Protocols', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () => context.push('/rehab-protocols', extra: {'scanRecord': scan}),
+                  ),
               ],
             ),
           ),
@@ -599,7 +616,6 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
                   extra: {
                     'plotName': scan.plotName,
                     'soilType': scan.soilType,
-                    'updateId': scan.id,
                   },
                 );
               },
@@ -657,269 +673,5 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
   Color _evaluateTemp(double t) =>
       (t >= 18 && t <= 28) ? Colors.green : Colors.orange;
 
-  Widget _buildCropRecommendation(String cropsText, {bool inHeader = false}) {
-    final crops = cropsText.split(',').map((e) => e.trim()).toList();
-    final displayCrops =
-        _isCropsExpanded ? crops.take(12).toList() : crops.take(5).toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Recommended Crops',
-              style:
-                  (inHeader
-                      ? const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      )
-                      : Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      )),
-            ),
-            IconButton(
-              onPressed:
-                  () => setState(() => _isCropsExpanded = !_isCropsExpanded),
-              icon: Icon(
-                _isCropsExpanded
-                    ? Icons.keyboard_arrow_up_rounded
-                    : Icons.keyboard_arrow_down_rounded,
-                color: inHeader ? Colors.white70 : AppColors.primary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children:
-              displayCrops.asMap().entries.map((entry) {
-                final index = entry.key;
-                final crop = entry.value;
-                final isTopTier = index < 3;
-                return _buildCropBadge(
-                  crop,
-                  isTopTier: isTopTier,
-                  inHeader: inHeader,
-                );
-              }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCropBadge(
-    String name, {
-    bool isTopTier = false,
-    bool inHeader = false,
-  }) {
-    final bgColor =
-        inHeader
-            ? (isTopTier
-                ? Colors.white.withValues(alpha: 0.25)
-                : Colors.white.withValues(alpha: 0.12))
-            : (isTopTier
-                ? AppColors.primary
-                : AppColors.primary.withValues(alpha: 0.1));
-    final textColor =
-        inHeader
-            ? Colors.white
-            : (isTopTier ? Colors.white : AppColors.primary);
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isTopTier ? 16 : 12,
-        vertical: isTopTier ? 10 : 8,
-      ),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color:
-              inHeader
-                  ? Colors.white.withValues(alpha: 0.2)
-                  : AppColors.primary.withValues(alpha: 0.3),
-          width: isTopTier ? 2 : 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isTopTier ? Icons.star_rounded : Icons.grass_rounded,
-            size: isTopTier ? 18 : 14,
-            color: textColor,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            name,
-            style: TextStyle(
-              fontWeight: isTopTier ? FontWeight.w900 : FontWeight.bold,
-              fontSize: 14,
-              color: textColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRehabProtocols(String rehabText, {bool inHeader = false}) {
-    final protocols = rehabText.split(',').map((e) => e.trim()).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Organic Rehab Protocols',
-              style:
-                  inHeader
-                      ? const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      )
-                      : Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-            ),
-            IconButton(
-              onPressed:
-                  () => setState(() => _isRehabExpanded = !_isRehabExpanded),
-              icon: Icon(
-                _isRehabExpanded
-                    ? Icons.keyboard_arrow_up_rounded
-                    : Icons.keyboard_arrow_down_rounded,
-                color: inHeader ? Colors.white70 : Colors.orange,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        AnimatedCrossFade(
-          firstChild: _buildSimpleRehabList(
-            protocols.take(2).toList(),
-            inHeader: inHeader,
-          ),
-          secondChild: Column(
-            children:
-                protocols.asMap().entries.map((entry) {
-                  return _buildRehabStep(
-                    entry.key + 1,
-                    entry.value,
-                    inHeader: inHeader,
-                  );
-                }).toList(),
-          ),
-          crossFadeState:
-              _isRehabExpanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 300),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSimpleRehabList(List<String> items, {bool inHeader = false}) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color:
-            inHeader
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.orange.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children:
-            items
-                .map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline_rounded,
-                          size: 14,
-                          color: inHeader ? Colors.white70 : Colors.orange,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            item,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                              color: inHeader ? Colors.white : null,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-                .toList(),
-      ),
-    );
-  }
-
-  Widget _buildRehabStep(int count, String text, {bool inHeader = false}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color:
-            inHeader
-                ? Colors.white.withValues(alpha: 0.15)
-                : (Theme.of(context).brightness == Brightness.dark
-                    ? AppColors.cardDark
-                    : Colors.white),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color:
-              inHeader
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : Colors.orange.withValues(alpha: 0.1),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 10,
-            backgroundColor: inHeader ? Colors.white24 : Colors.orange[100],
-            child: Text(
-              count.toString(),
-              style: TextStyle(
-                color: inHeader ? Colors.white : Colors.orange[900],
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-                color: inHeader ? Colors.white : null,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

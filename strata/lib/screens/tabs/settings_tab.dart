@@ -16,7 +16,6 @@ class SettingsTab extends ConsumerStatefulWidget {
 
 class _SettingsTabState extends ConsumerState<SettingsTab> {
   bool _notificationsEnabled = false;
-  bool _devModeExpanded = false;
 
   void _wipeDatabase() async {
     await DatabaseService.instance.wipeDatabase();
@@ -25,20 +24,6 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Local database cleared.')));
-    }
-  }
-
-  void _simulateBleScan() async {
-    final record = SoilMockGenerator.generateMockScan(
-      plotName: 'Simulated Debug Plot',
-      soilType: 'Loam',
-    );
-    await DatabaseService.instance.insertScan(record);
-    ref.invalidate(scansProvider);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Simulated mock scan injected.')),
-      );
     }
   }
 
@@ -175,89 +160,13 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
           const SizedBox(height: 8),
 
-          // ── Developer Options ──────────────────────────────────
-          const _SectionHeader(label: 'Developer Options'),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.cardDark : AppColors.surfaceLight,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
-              ),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.code_rounded,
-                      color: Colors.orange,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text('Developer Mode', style: textTheme.titleSmall),
-                  subtitle: Text(
-                    _devModeExpanded ? 'Tap to collapse' : 'Tap to expand',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.45),
-                    ),
-                  ),
-                  trailing: AnimatedRotation(
-                    turns: _devModeExpanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: const Icon(Icons.expand_more_rounded),
-                  ),
-                  onTap:
-                      () =>
-                          setState(() => _devModeExpanded = !_devModeExpanded),
-                ),
-                if (_devModeExpanded) ...[
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  _DevOption(
-                    label: 'Simulate Hardware Switch',
-                    subtitle: 'Force a mock connection state',
-                    icon: Icons.bluetooth_audio_rounded,
-                    isDark: isDark,
-                    trailingOverride: Switch(
-                      value: bleState.isConnected,
-                      activeThumbColor: AppColors.primary,
-                    onChanged: (val) async {
-                          if (!val) {
-                            await BleService.instance.disconnect();
-                          }
-                        },
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  _DevOption(
-                    label: 'Simulate BLE Scan',
-                    subtitle: 'Inject mock NPK and crop parameter data to DB',
-                    icon: Icons.play_circle_outline_rounded,
-                    isDark: isDark,
-                    onTap: _simulateBleScan,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
           // ── About ──────────────────────────────────
           const _SectionHeader(label: 'About'),
           _SettingsTile(
             icon: Icons.info_outline_rounded,
             label: 'App Version',
             isDark: isDark,
-            trailing: Text('1.0.2', style: textTheme.bodyMedium),
+            trailing: Text('1.0.3', style: textTheme.bodyMedium),
           ),
 
           const SizedBox(height: 32),
@@ -339,46 +248,3 @@ class _SettingsTile extends StatelessWidget {
   }
 }
 
-// ── Dev option row ─────────────────────────────────────────────────────────
-class _DevOption extends StatelessWidget {
-  const _DevOption({
-    required this.label,
-    required this.subtitle,
-    required this.icon,
-    required this.isDark,
-    this.trailingOverride,
-    this.onTap,
-  });
-
-  final String label;
-  final String subtitle;
-  final IconData icon;
-  final bool isDark;
-  final Widget? trailingOverride;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = AppColors.primary;
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      leading: Icon(icon, color: color, size: 20),
-      title: Text(label, style: textTheme.bodyMedium),
-      subtitle: Text(
-        subtitle,
-        style: textTheme.bodySmall?.copyWith(
-          color: colorScheme.onSurface.withValues(alpha: 0.4),
-        ),
-      ),
-      trailing:
-          trailingOverride ??
-          (onTap != null
-              ? const Icon(Icons.chevron_right_rounded, size: 18)
-              : null),
-      onTap: onTap ?? () {},
-    );
-  }
-}
