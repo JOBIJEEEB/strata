@@ -4,24 +4,15 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Set to true to use SoilMockGenerator instead of the real Pi hardware.
-// Set to false for production / real hardware testing.
-// ─────────────────────────────────────────────────────────────────────────────
-const bool kBleDebugMode = true;
+const bool kBleDebugMode = false;
 
-// ── UUID constants ────────────────────────────────────────────────────────────
 class StrataUUIDs {
   StrataUUIDs._();
 
   static const String service = '56c36f56-da27-464a-952a-9e6631168f6d';
-
-  // Pi diagnostics
   static const String cpuUsage = '56c36f57-da27-464a-952a-9e6631168f6d';
   static const String cpuTemp = '56c36f58-da27-464a-952a-9e6631168f6d';
   static const String battery = '56c36f59-da27-464a-952a-9e6631168f6d';
-
-  // Soil sensors
   static const String soilPh = '56c36f60-da27-464a-952a-9e6631168f6d';
   static const String soilMoisture = '56c36f61-da27-464a-952a-9e6631168f6d';
   static const String soilTemp = '56c36f62-da27-464a-952a-9e6631168f6d';
@@ -29,9 +20,8 @@ class StrataUUIDs {
   static const String nitrogen = '56c36f64-da27-464a-952a-9e6631168f6d';
   static const String phosphorus = '56c36f65-da27-464a-952a-9e6631168f6d';
   static const String potassium = '56c36f66-da27-464a-952a-9e6631168f6d';
-
-  // Scan trigger (write-only from app side)
   static const String scanTrigger = '56c36f67-da27-464a-952a-9e6631168f6d';
+  static const String mlOutput = '56c36f68-da27-464a-952a-9e6631168f6d';
 
   static const List<String> allSoilUUIDs = [
     soilPh,
@@ -41,6 +31,7 @@ class StrataUUIDs {
     nitrogen,
     phosphorus,
     potassium,
+    mlOutput,
   ];
 }
 
@@ -53,6 +44,7 @@ class BleSoilReading {
   final int nitrogen;
   final int phosphorus;
   final int potassium;
+  final String mlJson;
 
   const BleSoilReading({
     required this.soilPh,
@@ -62,6 +54,7 @@ class BleSoilReading {
     required this.nitrogen,
     required this.phosphorus,
     required this.potassium,
+    required this.mlJson,
   });
 }
 
@@ -200,7 +193,7 @@ class BleService {
   /// characteristics, then returns a [BleSoilReading].
   /// Throws a [TimeoutException] if not all values arrive within [timeout].
   Future<BleSoilReading> readSoilScan({
-    Duration timeout = const Duration(seconds: 15),
+    Duration timeout = const Duration(seconds: 75),
   }) async {
     _assertConnected();
 
@@ -267,6 +260,7 @@ class BleService {
       nitrogen: parseI(StrataUUIDs.nitrogen),
       phosphorus: parseI(StrataUUIDs.phosphorus),
       potassium: parseI(StrataUUIDs.potassium),
+      mlJson: raw[StrataUUIDs.mlOutput] ?? '{}',
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:strata/providers/providers.dart';
 import 'package:strata/database/database_service.dart';
 import 'package:strata/screens/tabs/history_tab.dart'; // Implements scansProvider
 import 'package:strata/services/ble_service.dart';
+import 'dart:convert';
 
 class SettingsTab extends ConsumerStatefulWidget {
   const SettingsTab({super.key});
@@ -15,7 +16,87 @@ class SettingsTab extends ConsumerStatefulWidget {
 }
 
 class _SettingsTabState extends ConsumerState<SettingsTab> {
-  bool _notificationsEnabled = false;
+  int _debugTapCount = 0;
+
+  void _recordHealthyScan() async {
+    final now = DateTime.now();
+    final timestamp = now.toIso8601String();
+
+    final healthyScan = ScanRecord(
+      plotName: 'Debug Healthy Plot',
+      soilType: 'Loamy',
+      timestamp: timestamp,
+      soilPh: 6.8,
+      moisture: 42.0,
+      temperature: 25.0,
+      ecLevel: 1.1,
+      nitrogen: 145,
+      phosphorus: 45,
+      potassium: 190,
+      healthStatus: 'Healthy',
+      cropRecommendation: jsonEncode([
+        {'name': 'Tomato', 'confidence': 95.0},
+        {'name': 'Maize', 'confidence': 88.5},
+        {'name': 'Onion', 'confidence': 76.2},
+      ]),
+      mlDeficiencies: [],
+      mlFlags: [],
+      rehabRecommendations: '',
+    );
+
+    await DatabaseService.instance.insertScan(healthyScan);
+    ref.invalidate(scansProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debug: Healthy scan recorded!'),
+          backgroundColor: AppColors.primary,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+  
+  void _recordUnhealthyScan() async {
+    final now = DateTime.now();
+    final timestamp = now.toIso8601String();
+
+    final unhealthyScan = ScanRecord(
+      plotName: 'Debug Unhealthy Plot',
+      soilType: 'Clay',
+      timestamp: timestamp,
+      soilPh: 5.0,
+      moisture: 15.0,
+      temperature: 30.0,
+      ecLevel: 0.5,
+      nitrogen: 40,
+      phosphorus: 15,
+      potassium: 80,
+      healthStatus: 'Unhealthy',
+      cropRecommendation: jsonEncode([
+        {'name': 'Wheat', 'confidence': 16.0},
+        {'name': 'Millet', 'confidence': 15.0},
+        {'name': 'Cotton', 'confidence': 11.67},
+      ]),
+      mlDeficiencies: ['N is LOW: 40 mg/kg (need > 50)', 'P is LOW: 15 mg/kg (need > 20)'],
+      mlFlags: ['Moisture LOW: 15.0% — consider irrigation/mulching'],
+      rehabRecommendations: 'FPJ, FAA, CalPhos',
+    );
+
+    await DatabaseService.instance.insertScan(unhealthyScan);
+    ref.invalidate(scansProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debug: Unhealthy scan recorded!'),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   void _wipeDatabase() async {
     await DatabaseService.instance.wipeDatabase();
@@ -52,7 +133,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
           const _SectionHeader(label: 'Hardware Setup'),
           _SettingsTile(
             icon: Icons.bluetooth_outlined,
-            label: bleState.isConnected ? 'Raspberry Pi' : 'Connect to Pi',
+            label: bleState.isConnected ? 'Strata' : 'Connect to Strata',
             subtitle: bleState.isConnected ? 'Connected' : 'Disconnected',
             isDark: isDark,
             trailing:
@@ -100,16 +181,6 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 // Instantly flips the entire ecosystem tree layout
                 ref.read(themeModeProvider.notifier).setDarkMode(val);
               },
-            ),
-          ),
-          _SettingsTile(
-            icon: Icons.notifications_outlined,
-            label: 'App Notifications',
-            isDark: isDark,
-            trailing: Switch(
-              value: _notificationsEnabled,
-              activeThumbColor: AppColors.primary,
-              onChanged: (v) => setState(() => _notificationsEnabled = v),
             ),
           ),
 
@@ -166,7 +237,19 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             icon: Icons.info_outline_rounded,
             label: 'App Version',
             isDark: isDark,
-            trailing: Text('1.0.3', style: textTheme.bodyMedium),
+            trailing: Text('1.0.4', style: textTheme.bodyMedium),
+            onTap: () {
+              setState(() {
+                _debugTapCount++;
+                if (_debugTapCount >= 3) {
+                  _debugTapCount = 0;
+                  _recordHealthyScan();
+                }
+              });
+            },
+            onLongPress: () {
+              _recordUnhealthyScan();
+            },
           ),
 
           const SizedBox(height: 32),
@@ -206,6 +289,7 @@ class _SettingsTile extends StatelessWidget {
     required this.trailing,
     this.subtitle,
     this.onTap,
+    this.onLongPress,
   });
 
   final IconData icon;
@@ -214,6 +298,7 @@ class _SettingsTile extends StatelessWidget {
   final bool isDark;
   final Widget trailing;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +328,7 @@ class _SettingsTile extends StatelessWidget {
                 : null,
         trailing: trailing,
         onTap: onTap,
+        onLongPress: onLongPress,
       ),
     );
   }

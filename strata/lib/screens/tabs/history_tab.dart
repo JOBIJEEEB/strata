@@ -571,6 +571,18 @@ class _PlotCard extends StatelessWidget {
     required this.selectionMode,
   });
 
+  Color _getSoilColor(String soil) {
+    final s = soil.toLowerCase();
+    if (s.contains('sandy') && s.contains('loamy')) return Colors.teal;
+    if (s.contains('clay')) return Colors.orange;
+    if (s.contains('loamy')) return Colors.green;
+    if (s.contains('sandy')) return Colors.amber;
+    if (s.contains('coarse')) return Colors.grey;
+    if (s.contains('silt')) return Colors.blueGrey;
+    if (s.contains('any')) return Colors.purple;
+    return AppColors.primary;
+  }
+
   @override
   Widget build(BuildContext context) {
     final accentColor = isHealthy ? AppColors.primary : Colors.redAccent;
@@ -657,13 +669,22 @@ class _PlotCard extends StatelessWidget {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      latestScan.soilType,
-                                      style: textTheme.bodySmall?.copyWith(
-                                        color: colorScheme.onSurface
-                                            .withValues(alpha: 0.55),
-                                        fontWeight: FontWeight.w600,
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: _getSoilColor(latestScan.soilType).withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        latestScan.soilType,
+                                        style: TextStyle(
+                                          color: _getSoilColor(latestScan.soilType),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,14 +28,15 @@ class ScanFlowScreen extends ConsumerStatefulWidget {
 }
 
 class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   int _currentView = 0;
 
   final _plotNameController = TextEditingController();
-  final List<String> _soilChoices = ['Loam', 'Sandy', 'Clay', 'Silt'];
+  final List<String> _soilChoices = ['Clay', 'Coarse', 'Loamy', 'Sandy', 'Sandy & Loamy', 'Silt', 'Any'];
   String? _selectedSoilType;
 
   late AnimationController _radarController;
+  late AnimationController _progressController;
   ScanRecord? _finalScanRecord;
   bool _isCropsExpanded = false;
 
@@ -45,6 +47,10 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
     _radarController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
+    );
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
     );
 
     if (widget.initialPlotName != null) {
@@ -65,6 +71,7 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
   void dispose() {
     _plotNameController.dispose();
     _radarController.dispose();
+    _progressController.dispose();
     super.dispose();
   }
 
@@ -86,19 +93,27 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
       return;
     }
 
-    setState(() => _currentView = 1);
+    setState(() {
+      _currentView = 1;
+      _finalScanRecord = null;   // Clear any previous scan result
+      _isCropsExpanded = false;  // Reset UI expansion state
+    });
     _radarController.repeat();
+    _progressController.reset();
+    _progressController.forward();
 
     // ── Debug mode: use mock data ──────────────────────────────────────────
     if (kBleDebugMode) {
+      await Future.delayed(const Duration(seconds: 10)); // Faster mock for testing
       _finalScanRecord = SoilMockGenerator.generateMockScan(
         plotName: _plotNameController.text.trim(),
         soilType: _selectedSoilType!,
         overrideId: widget.updateId,
       );
-      await Future.delayed(const Duration(seconds: 3));
       if (mounted) {
         _radarController.stop();
+        _progressController.animateTo(1.0, duration: const Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 600));
         setState(() => _currentView = 2);
       }
       return;
@@ -108,18 +123,63 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
     try {
       final reading = await ref
           .read(bleServiceProvider)
-          .readSoilScan(timeout: const Duration(seconds: 15));
+          .readSoilScan(); // Uses the new 75s default timeout
 
       final plotName = _plotNameController.text.trim().isEmpty
           ? 'Unnamed Plot'
           : _plotNameController.text.trim();
 
-      // Evaluate health using the same thresholds as SoilMockGenerator
-      final isHealthy = reading.soilPh >= 5.8 &&
-          reading.soilPh <= 7.5 &&
-          reading.nitrogen >= 40 &&
-          reading.phosphorus >= 25 &&
-          reading.potassium >= 30;
+      // Parse ML JSON
+      List<String> parsedFlags = [];
+      List<String> parsedDeficiencies = [];
+      String parsedRehab = '[]';
+      String cropJson = '[]';
+      String parsedHealthStatus = 'Healthy';
+      String parsedSubtext = '';
+      
+      try {
+        if (reading.mlJson.isNotEmpty && reading.mlJson != '{}') {
+          final Map<String, dynamic> parsedMl = jsonDecode(reading.mlJson);
+          
+          if (parsedMl['crops'] != null) {
+            cropJson = jsonEncode(parsedMl['crops']);
+          }
+          
+          if (parsedMl['ml_flags'] != null) {
+            parsedFlags = List<String>.from(parsedMl['ml_flags']);
+          }
+          
+          if (parsedMl['ml_deficiencies'] != null) {
+            final Map<String, dynamic> defs = parsedMl['ml_deficiencies'];
+            parsedDeficiencies = defs.entries
+                .map((e) => "${e.key} deficit: ${e.value} mg/kg")
+                .toList();
+          }
+
+          if (parsedMl['rehab'] != null) {
+            parsedRehab = jsonEncode(parsedMl['rehab']);
+          }
+
+          // Optional subtitle for the primary flag (e.g. sensor error message)
+          parsedSubtext = parsedMl['ml_subtext'] as String? ?? '';
+
+          // has_crop_match is the authoritative routing gate:
+          //   true  → crop recommendations screen (crops list will be populated)
+          //   false → soil rehabilitation screen (show rehab + ml_flags instead)
+          // Defaults to true if the field is absent (safe fallback for older payloads).
+          final hasCropMatch = parsedMl['has_crop_match'] as bool? ?? true;
+          parsedHealthStatus = hasCropMatch ? 'Healthy' : 'Unhealthy';
+        }
+      } catch (e) {
+        debugPrint('Error parsing ML JSON: $e');
+        // Fallback to basic rule-based check
+        final isHealthy = reading.soilPh >= 5.8 &&
+            reading.soilPh <= 7.5 &&
+            reading.nitrogen >= 40 &&
+            reading.phosphorus >= 25 &&
+            reading.potassium >= 30;
+        parsedHealthStatus = isHealthy ? 'Healthy' : 'Unhealthy';
+      }
 
       _finalScanRecord = ScanRecord(
         id: widget.updateId,
@@ -133,19 +193,24 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
         nitrogen: reading.nitrogen,
         phosphorus: reading.phosphorus,
         potassium: reading.potassium,
-        healthStatus: isHealthy ? 'Healthy' : 'Unhealthy',
-        cropRecommendation: isHealthy
-            ? 'Tomato, Maize, Onion, Pechay, Radish, Cabbage, Pepper, Beans'
-            : 'Spread organic compost, Apply bio-fertilizers, Use mulching techniques, Practice crop rotation, Add agricultural lime, Integrate green manure, Deep soil aeration, Balanced organic NPK application',
+        healthStatus: parsedHealthStatus,
+        cropRecommendation: cropJson,
+        mlFlags: parsedFlags,
+        mlDeficiencies: parsedDeficiencies,
+        rehabRecommendations: parsedRehab,
+        mlSubtext: parsedSubtext,
       );
 
       if (mounted) {
         _radarController.stop();
+        _progressController.animateTo(1.0, duration: const Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 600));
         setState(() => _currentView = 2);
       }
     } catch (e) {
       if (mounted) {
         _radarController.stop();
+        _progressController.stop();
         setState(() => _currentView = 0);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -381,48 +446,82 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
 
     return Center(
       key: const ValueKey('view1'),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Semantics(
-            label: 'Scanning active',
-            child: RotationTransition(
-              turns: _radarController,
-              child: Container(
-                width: 160,
-                height: 160,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.primary, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 40,
-                      spreadRadius: 10,
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.sensors_rounded,
-                  color: AppColors.primary,
-                  size: 72,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Semantics(
+              label: 'Scanning active',
+              child: RotationTransition(
+                turns: _radarController,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primary, width: 4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                        blurRadius: 40,
+                        spreadRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.sensors_rounded,
+                    color: AppColors.primary,
+                    size: 64,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 48),
-          Text('Reading Soil Diagnostics', style: textTheme.headlineSmall),
-          const SizedBox(height: 16),
-          Text(
-            'Calibrating electrochemical properties...\nPlease keep the probe steady.',
-            textAlign: TextAlign.center,
-            style: textTheme.bodyLarge?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.6),
+            const SizedBox(height: 48),
+            Text(
+              'Reading Soil Diagnostics',
+              style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-          ),
-        ],
+            const SizedBox(height: 32),
+            AnimatedBuilder(
+              animation: _progressController,
+              builder: (context, child) {
+                return Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: _progressController.value,
+                        minHeight: 12,
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${(_progressController.value * 100).toInt()}% Complete',
+                      style: textTheme.labelLarge?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Strata is performing a 10-point sensor averaging analysis for maximum precision.\nThis process takes approximately 20 seconds.',
+              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium?.copyWith(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -520,91 +619,100 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: BentoBox(
-                      icon: Icons.eco_rounded,
-                      label: 'Nitrogen',
-                      value: scan.nitrogen.toString(),
-                      unit: 'mg/kg',
-                      color: _evaluateN(scan.nitrogen),
+          
+          Builder(builder: (context) {
+            bool hasCrops = false;
+            try {
+              final List decoded = jsonDecode(scan.cropRecommendation);
+              hasCrops = decoded.isNotEmpty;
+            } catch(_) {}
+            
+            return Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: BentoBox(
+                        icon: Icons.eco_rounded,
+                        label: 'Nitrogen',
+                        value: scan.nitrogen.toString(),
+                        unit: 'mg/kg',
+                        color: _evaluateN(scan.nitrogen, hasCrops),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: gapPad),
-                  Expanded(
-                    child: BentoBox(
-                      icon: Icons.science_rounded,
-                      label: 'Phosphorus',
-                      value: scan.phosphorus.toString(),
-                      unit: 'mg/kg',
-                      color: _evaluateP(scan.phosphorus),
+                    const SizedBox(width: gapPad),
+                    Expanded(
+                      child: BentoBox(
+                        icon: Icons.science_rounded,
+                        label: 'Phosphorus',
+                        value: scan.phosphorus.toString(),
+                        unit: 'mg/kg',
+                        color: _evaluateP(scan.phosphorus, hasCrops),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: gapPad),
-                  Expanded(
-                    child: BentoBox(
-                      icon: Icons.spa_rounded,
-                      label: 'Potassium',
-                      value: scan.potassium.toString(),
-                      unit: 'mg/kg',
-                      color: _evaluateK(scan.potassium),
+                    const SizedBox(width: gapPad),
+                    Expanded(
+                      child: BentoBox(
+                        icon: Icons.spa_rounded,
+                        label: 'Potassium',
+                        value: scan.potassium.toString(),
+                        unit: 'mg/kg',
+                        color: _evaluateK(scan.potassium, hasCrops),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: gapPad),
-              Row(
-                children: [
-                  Expanded(
-                    child: BentoBox(
-                      icon: Icons.water_drop_rounded,
-                      label: 'Moisture',
-                      value: scan.moisture.toStringAsFixed(1),
-                      unit: '%',
-                      color: _evaluateMoisture(scan.moisture),
+                  ],
+                ),
+                const SizedBox(height: gapPad),
+                Row(
+                  children: [
+                    Expanded(
+                      child: BentoBox(
+                        icon: Icons.water_drop_rounded,
+                        label: 'Moisture',
+                        value: scan.moisture.toStringAsFixed(1),
+                        unit: '%',
+                        color: _evaluateMoisture(scan.moisture, hasCrops),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: gapPad),
-                  Expanded(
-                    child: BentoBox(
-                      icon: Icons.thermostat_rounded,
-                      label: 'Temp',
-                      value: scan.temperature.toStringAsFixed(1),
-                      unit: '°C',
-                      color: _evaluateTemp(scan.temperature),
+                    const SizedBox(width: gapPad),
+                    Expanded(
+                      child: BentoBox(
+                        icon: Icons.thermostat_rounded,
+                        label: 'Temp',
+                        value: scan.temperature.toStringAsFixed(1),
+                        unit: '°C',
+                        color: _evaluateTemp(scan.temperature, hasCrops),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: gapPad),
-              Row(
-                children: [
-                  Expanded(
-                    child: BentoBox(
-                      icon: Icons.speed_rounded,
-                      label: 'pH Level',
-                      value: scan.soilPh.toStringAsFixed(1),
-                      unit: 'pH',
-                      color: _evaluatePh(scan.soilPh),
+                  ],
+                ),
+                const SizedBox(height: gapPad),
+                Row(
+                  children: [
+                    Expanded(
+                      child: BentoBox(
+                        icon: Icons.speed_rounded,
+                        label: 'pH Level',
+                        value: scan.soilPh.toStringAsFixed(1),
+                        unit: 'pH',
+                        color: _evaluatePh(scan.soilPh, hasCrops),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: gapPad),
-                  Expanded(
-                    child: BentoBox(
-                      icon: Icons.bolt_rounded,
-                      label: 'EC Level',
-                      value: scan.ecLevel.toStringAsFixed(2),
-                      unit: 'mS/cm',
-                      color: _evaluateEc(scan.ecLevel),
+                    const SizedBox(width: gapPad),
+                    Expanded(
+                      child: BentoBox(
+                        icon: Icons.bolt_rounded,
+                        label: 'EC Level',
+                        value: scan.ecLevel.toStringAsFixed(2),
+                        unit: 'µS/cm',
+                        color: _evaluateEc(scan.ecLevel, hasCrops),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                  ],
+                ),
+              ],
+            );
+          }),
           const SizedBox(height: 32),
           if (widget.viewOnlyRecord != null)
             StrataButton(
@@ -657,21 +765,20 @@ class _ScanFlowScreenState extends ConsumerState<ScanFlowScreen>
     );
   }
 
-  Color _evaluateN(int n) =>
-      n >= 40 ? Colors.green : (n >= 25 ? Colors.orange : Colors.red);
-  Color _evaluateP(int p) =>
-      p >= 25 ? Colors.green : (p >= 15 ? Colors.orange : Colors.red);
-  Color _evaluateK(int k) =>
-      k >= 30 ? Colors.green : (k >= 20 ? Colors.orange : Colors.red);
-  Color _evaluatePh(double ph) =>
-      (ph >= 5.8 && ph <= 7.5) ? Colors.green : Colors.orange;
-  Color _evaluateMoisture(double m) =>
-      (m >= 40 && m <= 80)
-          ? Colors.green
-          : (m >= 20 ? Colors.orange : Colors.red);
-  Color _evaluateEc(double ec) => ec <= 1.5 ? Colors.green : Colors.orange;
-  Color _evaluateTemp(double t) =>
-      (t >= 18 && t <= 28) ? Colors.green : Colors.orange;
+  Color _evaluateN(int n, bool hasCrops) =>
+      hasCrops ? Colors.green : (n >= 40 ? Colors.green : (n >= 25 ? Colors.orange : Colors.red));
+  Color _evaluateP(int p, bool hasCrops) =>
+      hasCrops ? Colors.green : (p >= 25 ? Colors.green : (p >= 15 ? Colors.orange : Colors.red));
+  Color _evaluateK(int k, bool hasCrops) =>
+      hasCrops ? Colors.green : (k >= 30 ? Colors.green : (k >= 20 ? Colors.orange : Colors.red));
+  Color _evaluatePh(double ph, bool hasCrops) =>
+      hasCrops ? Colors.green : ((ph >= 5.8 && ph <= 7.5) ? Colors.green : Colors.orange);
+  Color _evaluateMoisture(double m, bool hasCrops) =>
+      hasCrops ? Colors.blue : ((m >= 40 && m <= 80) ? Colors.blue : (m >= 20 ? Colors.orange : Colors.red));
+  Color _evaluateEc(double ec, bool hasCrops) =>
+      hasCrops ? Colors.amber : (ec <= 1.5 ? Colors.amber : Colors.orange);
+  Color _evaluateTemp(double t, bool hasCrops) =>
+      hasCrops ? Colors.redAccent : ((t >= 18 && t <= 28) ? Colors.redAccent : Colors.orange);
 
 
 }

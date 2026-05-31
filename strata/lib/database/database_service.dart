@@ -1,7 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:csv/csv.dart';
-import 'package:flutter/foundation.dart'; 
+import 'package:flutter/foundation.dart';
+import 'dart:convert';
 
 class ScanRecord {
   final int? id;
@@ -16,7 +17,11 @@ class ScanRecord {
   final int phosphorus;
   final int potassium;
   final String healthStatus;
-  final String cropRecommendation;
+  final String cropRecommendation; // JSON string representing Top 5 crops
+  final List<String> mlDeficiencies;
+  final List<String> mlFlags;
+  final String rehabRecommendations; // JSON-encoded list of rehab keys
+  final String mlSubtext;            // Optional subtitle for the primary ml_flag
 
   ScanRecord({
     this.id,
@@ -31,7 +36,11 @@ class ScanRecord {
     this.phosphorus = 0,
     this.potassium = 0,
     this.healthStatus = 'Healthy',
-    this.cropRecommendation = 'Tomato, Onion, Maize, or Pechay',
+    this.cropRecommendation = '[]',
+    this.mlDeficiencies = const [],
+    this.mlFlags = const [],
+    this.rehabRecommendations = '',
+    this.mlSubtext = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -49,6 +58,10 @@ class ScanRecord {
       'potassium': potassium,
       'health_status': healthStatus,
       'crop_recommendation': cropRecommendation,
+      'ml_deficiencies': jsonEncode(mlDeficiencies),
+      'ml_flags': jsonEncode(mlFlags),
+      'rehab_recommendations': rehabRecommendations,
+      'ml_subtext': mlSubtext,
     };
   }
 
@@ -66,9 +79,23 @@ class ScanRecord {
       phosphorus: map['phosphorus']?.toInt() ?? 0,
       potassium: map['potassium']?.toInt() ?? 0,
       healthStatus: map['health_status'] ?? 'Healthy',
-      cropRecommendation:
-          map['crop_recommendation'] ?? 'Tomato, Onion, Maize, or Pechay',
+      cropRecommendation: map['crop_recommendation'] ?? '[]',
+      mlDeficiencies: _parseStringList(map['ml_deficiencies']),
+      mlFlags: _parseStringList(map['ml_flags']),
+      rehabRecommendations: map['rehab_recommendations'] ?? '',
+      mlSubtext: map['ml_subtext'] as String? ?? '',
     );
+  }
+
+  static List<String> _parseStringList(dynamic value) {
+    if (value == null) return [];
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is List) return decoded.map((e) => e.toString()).toList();
+      return [];
+    } catch (_) {
+      return [];
+    }
   }
 }
 
@@ -91,7 +118,7 @@ class DatabaseService {
 
       return await openDatabase(
         path,
-        version: 5,
+        version: 7,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       );
@@ -116,7 +143,11 @@ class DatabaseService {
         phosphorus INTEGER,
         potassium INTEGER,
         health_status TEXT,
-        crop_recommendation TEXT
+        crop_recommendation TEXT,
+        ml_deficiencies TEXT,
+        ml_flags TEXT,
+        rehab_recommendations TEXT,
+        ml_subtext TEXT
       )
     ''');
   }
@@ -144,6 +175,22 @@ class DatabaseService {
       );
       await db.execute(
         "ALTER TABLE scans ADD COLUMN soil_type TEXT DEFAULT 'Unknown'",
+      );
+    }
+    if (oldVersion < 6) {
+      await db.execute(
+        "ALTER TABLE scans ADD COLUMN ml_deficiencies TEXT DEFAULT '[]'",
+      );
+      await db.execute(
+        "ALTER TABLE scans ADD COLUMN ml_flags TEXT DEFAULT '[]'",
+      );
+      await db.execute(
+        "ALTER TABLE scans ADD COLUMN rehab_recommendations TEXT DEFAULT ''",
+      );
+    }
+    if (oldVersion < 7) {
+      await db.execute(
+        "ALTER TABLE scans ADD COLUMN ml_subtext TEXT DEFAULT ''",
       );
     }
   }
@@ -223,12 +270,15 @@ class DatabaseService {
         "pH",
         "Moisture (%)",
         "Temperature (C)",
-        "EC (mS/cm)",
+        "EC (µS/cm)",
         "Nitrogen (N)",
         "Phosphorus (P)",
         "Potassium (K)",
         "Status",
-        "Recommendation",
+        "Top Crops",
+        "Deficiencies",
+        "Physical Flags",
+        "Rehab Methods",
       ]);
       for (var scan in scans) {
         rows.add([
@@ -245,6 +295,9 @@ class DatabaseService {
           scan.potassium,
           scan.healthStatus,
           scan.cropRecommendation,
+          scan.mlDeficiencies.join('; '),
+          scan.mlFlags.join('; '),
+          scan.rehabRecommendations,
         ]);
       }
       return const ListToCsvConverter().convert(rows);

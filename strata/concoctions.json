@@ -1,0 +1,136 @@
+{
+  "manual_title": "Organic Concoctions Guide ",
+  "concoctions": [
+    {
+      "id": "FPJ",
+      "name": "Fermented Plant Juice",
+      "description": "A natural fertilizer made from the fermented sap and chlorophyll of vigorous plants, capturing their enzymatic energy and nutrients.",
+      "purpose": "Provides a high concentration of Nitrogen (N) and natural growth hormones to the plants.",
+      "procedure": [
+        "Collect young plant shoots or nitrogen-rich leaves (e.g., Kakawate) early in the morning.",
+        "Finely chop the materials to maximize nutrient extraction.",
+        "Mix the chopped materials with molasses at a 1:1 ratio by weight.",
+        "If the plant material is particularly dry, increase the amount of molasses to ensure proper fermentation.",
+        "Store in a container and ferment for 7 days."
+      ],
+      "application": {
+        "stage": "Use during the vegetative or growing stage.",
+        "dilution": "10mL per 1 liter of water.",
+        "frequency": "Apply 2 to 3 times per week."
+      }
+    },
+    {
+      "id": "FFJ",
+      "name": "Fermented Fruit Juice",
+      "description": "A liquid fertilizer derived from sweet, potassium-rich fruits, often referred to as 'plant food' for the reproductive phase.",
+      "purpose": "Rich in Potassium (K); acts as a taste enhancer to improve the sweetness of the harvest.",
+      "procedure": [
+        "Use sweet, ripe fruits such as bananas or papayas.",
+        "Chop the fruits into small pieces.",
+        "Mix thoroughly with molasses at a 1:1 ratio.",
+        "Place in a covered container and ferment for 7 days."
+      ],
+      "application": {
+        "stage": "Apply during the flowering and fruiting stages.",
+        "dilution": "10mL per 1 liter of water.",
+        "frequency": "Apply 2 to 3 times per week."
+      }
+    },
+    {
+      "id": "FAA",
+      "name": "Fish Amino Acid",
+      "description": "A nutrient-dense liquid produced from fermented fish waste, providing a diverse profile of nitrogen and minerals.",
+      "purpose": "A general-purpose fertilizer providing NPK, Calcium, and Magnesium.",
+      "procedure": [
+        "Collect fish scraps, entrails, or chopped whole fish.",
+        "Mix the fish material with molasses at a 1:1 ratio.",
+        "Seal the container and allow it to ferment for 7 days."
+      ],
+      "application": {
+        "stage": "Suitable for all growth stages.",
+        "dilution": "10mL per 1 liter of water.",
+        "frequency": "Apply 2 to 3 times per week."
+      }
+    },
+    {
+      "id": "IMO",
+      "name": "Indigenous Microorganisms",
+      "description": "A culture of beneficial local microbes harvested from the environment to restore soil biological health.",
+      "purpose": "Recharges the soil with beneficial bacteria and accelerates the decomposition of organic matter.",
+      "procedure": [
+        "Place half-cooked rice into a bamboo container.",
+        "Cover with paper and plastic to protect from rain and leave for 3 to 5 days until white mold appears.",
+        "Harvest the molded rice and mix it with molasses at a 1:1 ratio.",
+        "Ferment the mixture for another 7 days (12 days total process)."
+      ],
+      "application": {
+        "stage": "Primarily used during land preparation.",
+        "dilution": "10mL per 1 liter of water.",
+        "frequency": "Apply consistently during the 1-to-2-week land-resting period before planting."
+      }
+    },
+    {
+      "id": "LABS",
+      "name": "Lactic Acid Bacteria Serum",
+      "description": "A resilient probiotic serum containing lactic acid bacteria, which improves digestion in animals and nutrient uptake in plants.",
+      "purpose": "A probiotic serum used to improve soil health and livestock digestion.",
+      "procedure": [
+        "Phase 1: Ferment rice wash (water from the first wash of rice) for 1 week.",
+        "Phase 2: Extract the liquid and add milk at a 1:9 ratio (1 part rice wash to 9 parts milk).",
+        "Ferment for 1 week.",
+        "Phase 3: Extract the middle 'yellow' liquid (the serum) and mix with molasses at a 1:1 ratio.",
+        "Ferment for a final 1 week."
+      ],
+      "application": {
+        "stage": "General use for soil or livestock.",
+        "dilution": "10mL/L for plants; up to 20mL/L for livestock drinking water.",
+        "frequency": "Apply 2 to 3 times per week."
+      }
+    },
+    {
+      "id": "CalPhos",
+      "name": "Calcium Phosphate",
+      "description": "A solution extracted from roasted organic calcium sources using vinegar to make the minerals water-soluble and plant-available.",
+      "purpose": "Prevents flower and fruit drop by strengthening the plant's reproductive structures.",
+      "procedure": [
+        "Clean eggshells or bones and roast/pan-heat them until slightly browned to enrich the phosphorus.",
+        "Crush or chop the roasted materials into small pieces.",
+        "Submerge the pieces in natural vinegar (e.g., coconut or sugar palm vinegar) at a 1:9 ratio.",
+        "Allow the mixture to sit and ferment for 21 days."
+      ],
+      "application": {
+        "stage": "Apply during the flowering and fruiting stages.",
+        "dilution": "10mL per 1 liter of water.",
+        "frequency": "Apply 2 to 3 times per week."
+      }
+    },
+    {
+      "id": "OHN",
+      "name": "Oriental Herbal Nutrient",
+      "description": "A traditional herbal extract used as a natural prophylactic and pest deterrent, strengthening the plant from the inside out.",
+      "purpose": "Serves as a natural pest repellent and plant immune system booster.",
+      "procedure": [
+        "Finely chop aromatic herbs (e.g., ginger, garlic, oregano, or citronella).",
+        "Phase 1: Mix herbs with molasses and ferment for 3 to 5 days.",
+        "Phase 2: Add natural vinegar to the mixture (approx. 700mL vinegar per 400mL molasses) and ferment for another 5 to 7 days."
+      ],
+      "application": {
+        "stage": "General prevention throughout all stages.",
+        "dilution": "10mL per 1 liter of water.",
+        "frequency": "Apply 2 to 3 times per week."
+      }
+    }
+  ],
+  "general_maintenance_standards": {
+    "storage_environment": "Store all containers in a cool, dry place away from direct sunlight.",
+    "shelf_life": {
+      "duration": "Concoctions are at peak quality for 6 months.",
+      "warning": "Beyond this, the microbes may deplete the available food (molasses), reducing potency."
+    },
+    "sanitation": "Always clean materials before processing and ensure containers are sealed properly to avoid contamination from flies or pests.",
+    "quality_indicators": {
+      "success": "A successful batch should have a sweet-sour, fermented aroma.",
+      "failure": "A foul or putrid smell indicates contamination, and the batch should be discarded."
+    }
+  }
+}

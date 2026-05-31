@@ -69,7 +69,7 @@ class _PlotHistoryScreenState extends ConsumerState<PlotHistoryScreen> {
     if (render != true || !context.mounted) return;
 
     try {
-      final header = 'ID,Plot Name,Soil Type,Timestamp,Soil pH,Moisture (%),Temp (°C),EC Level (mS/cm),Nitrogen (mg/kg),Phosphorus (mg/kg),Potassium (mg/kg),Health Status,Crop Recommendation\n';
+      final header = 'ID,Plot Name,Soil Type,Timestamp,Soil pH,Moisture (%),Temp (°C),EC Level (µS/cm),Nitrogen (mg/kg),Phosphorus (mg/kg),Potassium (mg/kg),Health Status,Crop Recommendation\n';
       final buffer = StringBuffer(header);
       for (final s in selectedScans) {
         buffer.write('${s.id},"${s.plotName}","${s.soilType}","${s.timestamp}",${s.soilPh},${s.moisture},${s.temperature},${s.ecLevel},${s.nitrogen},${s.phosphorus},${s.potassium},"${s.healthStatus}","${s.cropRecommendation.replaceAll('"', '""')}"\n');

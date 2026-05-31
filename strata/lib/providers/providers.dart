@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:strata/database/database_service.dart';
 import 'package:strata/services/ble_service.dart';
+import 'dart:convert';
 
 // ── Theme Mode ────────────────────────────────────────────────────────────────
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
@@ -103,8 +104,23 @@ class SoilMockGenerator {
       potassium: k,
       healthStatus: isHealthy ? 'Healthy' : 'Unhealthy',
       cropRecommendation: isHealthy
-          ? 'Tomato, Maize, Onion, Pechay, Radish, Cabbage, Pepper, Beans'
-          : 'Spread organic compost, Apply bio-fertilizers, Use mulching techniques, Practice crop rotation, Add agricultural lime, Integrate green manure, Deep soil aeration, Balanced organic NPK application',
+          ? jsonEncode([
+              {'name': 'Tomato', 'confidence': 95.0},
+              {'name': 'Maize', 'confidence': 88.5},
+              {'name': 'Onion', 'confidence': 76.2},
+              {'name': 'Pechay', 'confidence': 65.1},
+              {'name': 'Radish', 'confidence': 50.0},
+            ])
+          : jsonEncode([
+              {'name': 'Wheat', 'confidence': 16.0},
+              {'name': 'Millet', 'confidence': 15.0},
+              {'name': 'Cotton', 'confidence': 11.67},
+              {'name': 'Ladyfinger', 'confidence': 10.33},
+              {'name': 'Barley', 'confidence': 7.33},
+            ]),
+      mlDeficiencies: isHealthy ? [] : ['N is LOW: $n mg/kg (need > 50)', 'P is LOW: $p mg/kg (need > 20)'],
+      mlFlags: isHealthy ? [] : ['Moisture LOW: 20.0% — consider irrigation/mulching'],
+      rehabRecommendations: isHealthy ? '' : 'FPJ, FAA, CalPhos',
     );
   }
 }

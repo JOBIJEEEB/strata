@@ -22,27 +22,20 @@ class HomeTab extends ConsumerWidget {
 
     final scansAsyncValue = ref.watch(scansProvider);
 
+    Color getSoilColor(String soil) {
+      final s = soil.toLowerCase();
+      if (s.contains('sandy') && s.contains('loamy')) return Colors.teal;
+      if (s.contains('clay')) return Colors.orange;
+      if (s.contains('loamy')) return Colors.green;
+      if (s.contains('sandy')) return Colors.amber;
+      if (s.contains('coarse')) return Colors.grey;
+      if (s.contains('silt')) return Colors.blueGrey;
+      if (s.contains('any')) return Colors.purple;
+      return AppColors.primary;
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: SizedBox(
-        width: 68,
-        height: 68,
-        child: FloatingActionButton(
-          onPressed: () {
-            if (!isConnected) {
-              // Launch pairing screen natively overlay instead of Snackbar
-              context.push('/pairing');
-            } else {
-              context.push('/scan');
-            }
-          },
-          tooltip: 'New Scan',
-          elevation: 8,
-          child: const Icon(Icons.add_rounded, size: 36),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -118,8 +111,8 @@ class HomeTab extends ConsumerWidget {
                                 children: [
                                   Text(
                                     isConnected
-                                        ? 'Raspberry Pi Connected'
-                                        : 'Pi Disconnected',
+                                        ? 'Strata Connected'
+                                        : 'Strata Disconnected',
                                     style: textTheme.titleMedium,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -316,50 +309,41 @@ class HomeTab extends ConsumerWidget {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 2,
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                flex: 0,
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: getSoilColor(scan.soilType).withOpacity(0.15),
+                                                    borderRadius: BorderRadius.circular(8),
                                                   ),
-                                              decoration: BoxDecoration(
-                                                color: (isHealthy
-                                                        ? AppColors.primary
-                                                        : Colors.orange)
-                                                    .withValues(alpha: 0.15),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                scan.soilType,
-                                                style: TextStyle(
-                                                  color:
-                                                      isHealthy
-                                                          ? AppColors
-                                                              .primaryDark
-                                                          : Colors.orange[800],
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
+                                                  child: Text(
+                                                    scan.soilType,
+                                                    style: TextStyle(
+                                                      color: getSoilColor(scan.soilType),
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Flexible(
-                                              child: Text(
-                                                scan.plotName,
-                                                style: textTheme.titleMedium
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                    ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  scan.plotName,
+                                                  style: textTheme.titleMedium?.copyWith(
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
+                                            ],
+                                          ),
                                         const SizedBox(height: 4),
                                         Text(
                                           scan.timestamp.split('T').first,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:strata/database/database_service.dart';
 import 'package:strata/theme/app_theme.dart';
+import 'dart:convert';
 
 class RecommendedCropsScreen extends StatelessWidget {
   final ScanRecord scanRecord;
@@ -13,7 +14,18 @@ class RecommendedCropsScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final crops = scanRecord.cropRecommendation.split(',').map((e) => e.trim()).toList();
+    // Parse JSON
+    List<Map<String, dynamic>> crops = [];
+    try {
+      final parsed = jsonDecode(scanRecord.cropRecommendation);
+      if (parsed is List) {
+        crops = List<Map<String, dynamic>>.from(parsed);
+      }
+    } catch (_) {
+      // Legacy handling
+      final list = scanRecord.cropRecommendation.split(',').map((e) => e.trim()).toList();
+      crops = list.map((c) => {'name': c, 'match': 50.0, 'tier': 'SUITABLE'}).toList();
+    }
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.surfaceDark : AppColors.backgroundLight,
@@ -121,8 +133,16 @@ class RecommendedCropsScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 itemCount: crops.length,
                 itemBuilder: (context, index) {
-                  final crop = crops[index];
-                  return _buildCropCard(crop, index, isDark, textTheme);
+                  final cropData = crops[index];
+                  final rawName = cropData['name'] as String? ?? 'Unknown';
+                  // Convert snake_case to Title Case (e.g. thai_basil → Thai Basil)
+                  final name = rawName
+                      .split('_')
+                      .map((w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1).toLowerCase())
+                      .join(' ');
+                  final confidence = (cropData['match'] as num?)?.toDouble() ?? 0.0;
+                  final tier = (cropData['tier'] as String?) ?? 'SUITABLE';
+                  return _buildCropCard(name, confidence, tier, index, isDark, textTheme, colorScheme);
                 },
               ),
             ),
@@ -141,11 +161,10 @@ class RecommendedCropsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCropCard(String name, int index, bool isDark, TextTheme textTheme) {
-    // Basic mapping for icons/descriptions based on name
+  Widget _buildCropCard(String name, double confidence, String tier, int index, bool isDark, TextTheme textTheme, ColorScheme colorScheme) {
     final icon = _getCropIcon(name);
-    final description = _getCropDescription(name);
-    
+    final tierStyle = _getTierStyle(tier);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -162,7 +181,7 @@ class RecommendedCropsScreen extends StatelessWidget {
         ],
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(12),
@@ -177,43 +196,27 @@ class RecommendedCropsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      name,
-                      style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                    if (index < 3)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'TOP PICK',
-                          style: TextStyle(color: Colors.amber, fontSize: 8, fontWeight: FontWeight.w900),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 6),
                 Text(
-                  description,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                    height: 1.4,
+                  name,
+                  style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: tierStyle['color'] as Color,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    tierStyle['label'] as String,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildTag('Moderate Water'),
-                    const SizedBox(width: 8),
-                    _buildTag('Full Sun'),
-                  ],
-                )
               ],
             ),
           ),
@@ -222,35 +225,34 @@ class RecommendedCropsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTag(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
-      ),
-    );
+  Map<String, dynamic> _getTierStyle(String tier) {
+    switch (tier.toUpperCase()) {
+      case 'OPTIMAL':
+        return {'label': 'Optimal', 'color': const Color(0xFF2BB673)};
+      case 'HIGHLY SUITABLE':
+        return {'label': 'Highly Suitable', 'color': const Color(0xFF00897B)};
+      case 'SUITABLE':
+        return {'label': 'Suitable', 'color': const Color(0xFF1976D2)};
+      default:
+        return {'label': 'Suitable', 'color': const Color(0xFF1976D2)};
+    }
   }
+
+
 
   IconData _getCropIcon(String name) {
     final n = name.toLowerCase();
-    if (n.contains('tomato')) return Icons.circle; // Close enough to a tomato
+    if (n.contains('tomato')) return Icons.circle;
     if (n.contains('maize') || n.contains('corn')) return Icons.agriculture;
     if (n.contains('onion')) return Icons.brightness_low_rounded;
-    if (n.contains('pepper')) return Icons.spa;
+    if (n.contains('pepper') || n.contains('siling')) return Icons.spa;
+    if (n.contains('basil') || n.contains('herb') || n.contains('coriander') || n.contains('roselle')) return Icons.local_florist_rounded;
+    if (n.contains('bean') || n.contains('gram') || n.contains('lentil') || n.contains('pea')) return Icons.grain_rounded;
+    if (n.contains('cabbage') || n.contains('kale') || n.contains('pechay') || n.contains('lettuce') || n.contains('spinach')) return Icons.eco_rounded;
+    if (n.contains('carrot') || n.contains('radish') || n.contains('beetroot') || n.contains('labanos') || n.contains('potato')) return Icons.grass_rounded;
+    if (n.contains('cucumber') || n.contains('upo') || n.contains('patola') || n.contains('kalabasa') || n.contains('ampalaya')) return Icons.water_drop_rounded;
+    if (n.contains('garlic')) return Icons.spa_rounded;
+    if (n.contains('sugarcane') || n.contains('wheat') || n.contains('barley') || n.contains('ragi') || n.contains('jowar')) return Icons.agriculture_rounded;
     return Icons.grass_rounded;
-  }
-
-  String _getCropDescription(String name) {
-    final n = name.toLowerCase();
-    if (n.contains('tomato')) return 'High demand for Nitrogen and Phosphorus. Requires consistent moisture.';
-    if (n.contains('maize')) return 'A heavy feeder that thrives in your current soil conditions.';
-    if (n.contains('onion')) return 'Requires loose soil and moderate fertilization.';
-    if (n.contains('pechay')) return 'Fast-growing leafy green that benefits from your soil pH.';
-    return 'Resilient variety that matches your soil nutrient profile perfectly.';
   }
 }
